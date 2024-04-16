@@ -1,14 +1,20 @@
 package io.wispforest.condensed_creative.mixins.client;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenHandlerDuck;
 import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.entry.impl.ItemEntry;
+import io.wispforest.condensed_creative.mixins.CreativeScreenHandlerAccessor;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.CondensedInventory;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
@@ -16,6 +22,7 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.Item;
@@ -42,10 +49,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 
 @Mixin(CreativeInventoryScreen.class)
@@ -61,14 +65,10 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
     //-------------
 
-    @Shadow @Final private Set<TagKey<Item>> searchResultTags;
     @Unique private static final Identifier refreshButtonIconUnfocused = CondensedCreative.createID("refresh_button_unfocused");
     @Unique private static final Identifier refreshButtonIconFocused = CondensedCreative.createID("refresh_button_focused");
 
     @Unique private boolean validItemGroupForCondensedEntries = false;
-
-    @Unique private float currentRowPosition = 0;
-
 
     //-------------
 
@@ -85,7 +85,7 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
     private void addButtonRender(CallbackInfo ci){
         if(!CondensedCreative.getConfig().entryRefreshButton) return;
 
-        ClickableWidget widget = new TexturedButtonWidget(this.x + 200, this.y + 140, 16, 16, new ButtonTextures(refreshButtonIconUnfocused, refreshButtonIconFocused),
+        var widget = new TexturedButtonWidget(this.x + 200, this.y + 140, 16, 16, new ButtonTextures(refreshButtonIconUnfocused, refreshButtonIconFocused),
                 button -> {
                     CondensedEntryRegistry.refreshEntrypoints();
                     setSelectedTab(this.selectedTab);
@@ -102,7 +102,7 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
     @Inject(method = "getTooltipFromItem", at = @At("HEAD"), cancellable = true)
     private void testToReplaceTooltipText(ItemStack stack, CallbackInfoReturnable<List<Text>> cir){
-        Slot slot = ((HandledScreenAccessor)this).cc$getFocusedSlot();
+        var slot = ((HandledScreenAccessor)this).cc$getFocusedSlot();
 
         if(slot != null && slot.inventory instanceof CondensedInventory inv
                 && ItemEntry.areStacksEqual(slot.getStack(), stack)
@@ -120,16 +120,16 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
     @Inject(method = "setSelectedTab", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;clear()V", ordinal = 0))
     private void setSelectedTab$clearEntryList(ItemGroup group, CallbackInfo ci){
-        getHandlerDuck().getDefaultEntryList().clear();
+        this.getHandlerDuck().getDefaultEntryList().clear();
 
-        validItemGroupForCondensedEntries = false;
+        this.validItemGroupForCondensedEntries = false;
     }
 
     @Inject(method = "setSelectedTab", at = {
                 @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 0, shift = At.Shift.BY, by = 2),
                 @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 1, shift = At.Shift.BY, by = 2)})
     private void setSelectedTab$addStackToEntryList(ItemGroup group, CallbackInfo ci){
-        getHandlerDuck().addToDefaultEntryList(this.handler.itemList.get(this.handler.itemList.size() - 1));
+        this.getHandlerDuck().addToDefaultEntryList(this.handler.itemList.get(this.handler.itemList.size() - 1));
     }
 
     @Inject(method = "setSelectedTab", at = {
@@ -138,60 +138,76 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
     private void setSelectedTab$addStacksToEntryList(ItemGroup group, CallbackInfo ci){
         this.handler.itemList.forEach(stack -> getHandlerDuck().addToDefaultEntryList(stack));
 
-        if(group != Registries.ITEM_GROUP.get(ItemGroups.HOTBAR)) validItemGroupForCondensedEntries = true;
+        if(group != Registries.ITEM_GROUP.get(ItemGroups.HOTBAR)) this.validItemGroupForCondensedEntries = true;
     }
 
     //-------------
 
     @Inject(method = "search", at = @At("HEAD"))
     private void search$clearEntryList(CallbackInfo ci){
-        getHandlerDuck().getDefaultEntryList().clear();
+        this.getHandlerDuck().getDefaultEntryList().clear();
     }
 
     @Inject(method = "search", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V", shift = At.Shift.BY, by = -2))
     private void search$addStacksToEntryList(CallbackInfo ci){
-        this.handler.itemList.forEach(stack -> getHandlerDuck().addToDefaultEntryList(stack));
+        this.handler.itemList.forEach(stack -> this.getHandlerDuck().addToDefaultEntryList(stack));
     }
 
-    @Redirect(method = {"setSelectedTab", "search"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
-    private void scrollLineCountDefault(CreativeInventoryScreen.CreativeScreenHandler instance, float position){
+    @Inject(method = {"setSelectedTab", "search"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
+    private void scrollLineCountDefault(CallbackInfo ci){
         this.getHandlerDuck().markEntryListDirty();
-        this.calculateScrollLines(0, 0);
     }
 
     //------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     @Inject(method = "setSelectedTab", at = @At(value = "JUMP", opcode = Opcodes.IF_ACMPNE, ordinal = 2))
     private void filterEntriesAndAddCondensedEntries(ItemGroup group, CallbackInfo ci){
+        if (!validItemGroupForCondensedEntries) return;
+
         var handler = ItemGroupVariantHandler.getHandler(group);
 
-        Collection<Integer> possibleTabs = Set.of(0);
+        var possibleTabs = (handler != null && handler.isVariant(group))
+                ? handler.getSelectedTabs(group)
+                : Set.of(0);
 
-        if(handler != null && handler.isVariant(group)) possibleTabs = handler.getSelectedTabs(group);
-
-        ItemGroupHelper[] helpers = possibleTabs.stream()
+        var helpers = possibleTabs.stream()
                 .map(tab -> ItemGroupHelper.of(group, tab))
                 .toArray(ItemGroupHelper[]::new);
 
-        if (!validItemGroupForCondensedEntries) return;
+        var defaultList = this.getHandlerDuck().getDefaultEntryList();
 
-        for (CondensedItemEntry condensedItemEntry : CondensedEntryRegistry.getEntryList(helpers)) {
-            int i = this.getHandlerDuck().getDefaultEntryList().indexOf(Entry.of(condensedItemEntry.getEntryStack()));
+        var indexToEntry = new Int2ObjectAVLTreeMap<CondensedItemEntry>(Collections.reverseOrder());
 
-            condensedItemEntry.initializeChildren(this.getHandlerDuck().getDefaultEntryList());
+        var parentEntries = CondensedEntryRegistry.getEntryList(helpers);
 
-            List<CondensedItemEntry> allGroupedEntries = new ArrayList<>(condensedItemEntry.childrenEntry);
+        for (var condensedItemEntry : parentEntries) {
+            int i = defaultList.indexOf(Entry.of(condensedItemEntry.getEntryStack()));
 
-            allGroupedEntries.add(0, condensedItemEntry);
+            condensedItemEntry.initializeChildren(defaultList);
 
-            if(allGroupedEntries.size() <= 1) continue;
+            if(condensedItemEntry.childrenEntry.isEmpty()) continue;
 
-            if (i >= 0 && i < this.getHandlerDuck().getDefaultEntryList().size()) {
-                this.getHandlerDuck().getDefaultEntryList().addAll(i, allGroupedEntries);
+            if (i >= 0 && i < defaultList.size()) {
+                defaultList.add(i, condensedItemEntry);
             } else {
-                this.getHandlerDuck().getDefaultEntryList().addAll(allGroupedEntries);
+                defaultList.add(condensedItemEntry);
             }
         }
+
+        for (var condensedItemEntry : parentEntries) {
+            indexToEntry.put(defaultList.indexOf(condensedItemEntry), condensedItemEntry);
+        }
+
+        indexToEntry.forEach((i, condensedItemEntry) -> {
+            var childrenStartIndex = i + 1;
+            var children = List.copyOf(condensedItemEntry.childrenEntry);
+
+            if (childrenStartIndex >= 0 && childrenStartIndex < defaultList.size()) {
+                defaultList.addAll(childrenStartIndex, children);
+            } else {
+                defaultList.addAll(children);
+            }
+        });
     }
 
     //----------
@@ -203,12 +219,14 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
             this.getHandlerDuck().markEntryListDirty();
 
-            this.getHandlerDuck().scrollItems(Math.round(this.currentRowPosition));
+            this.handler.scrollItems(this.scrollPosition);
 
-            if(this.currentRowPosition > getHandlerDuck().getMaxRowCount()) {
-                this.currentRowPosition = getHandlerDuck().getMaxRowCount();
+            var maxRows = ((CreativeScreenHandlerAccessor) this.handler).callGetOverflowRows();
 
-                this.getHandlerDuck().scrollItems(Math.round(this.currentRowPosition));
+            if(this.scrollPosition > maxRows) {
+                this.scrollPosition = maxRows;
+
+                this.handler.scrollItems(this.scrollPosition);
             }
 
             ci.cancel();
@@ -221,7 +239,7 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
     private int changePosForScrollBar(int y){
         int j = this.y + 18;
 
-        float scrollPosition = this.currentRowPosition / this.getHandlerDuck().getMaxRowCount(); // Float.isFinite()
+        float scrollPosition = this.scrollPosition/* * ((CreativeScreenHandlerAccessor) this.handler).callGetOverflowRows()*/; // Float.isFinite()
 
         if(!Float.isFinite(scrollPosition)) scrollPosition = 0;
 
@@ -230,32 +248,9 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
     //----------
 
-    @Redirect(method = "mouseScrolled", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
-    private void useLineCountScrolling1(CreativeInventoryScreen.CreativeScreenHandler instance, float position, double mouseX, double mouseY, double horizontalAmount, double verticalAmount){
-        this.calculateScrollLines(this.currentRowPosition, (float) verticalAmount);
-    }
-
-    @Redirect(method = "mouseDragged", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
-    private void useLineCountScrolling2(CreativeInventoryScreen.CreativeScreenHandler instance, float position){
-        this.currentRowPosition = this.scrollPosition * this.getHandlerDuck().getMaxRowCount();
-
-        this.calculateScrollLines(currentRowPosition, 0);
-    }
-
-    //----------
-
-    @Unique
-    private void calculateScrollLines(float currentRowPosition, float amount){
-        float adjustedRowPosition = MathHelper.clamp(currentRowPosition - amount, 0, getHandlerDuck().getMaxRowCount());
-
-        this.getHandlerDuck().scrollItems(Math.round(adjustedRowPosition));
-
-        this.currentRowPosition = adjustedRowPosition;
-    }
-
     @Unique
     public CreativeInventoryScreenHandlerDuck getHandlerDuck(){
-        return (CreativeInventoryScreenHandlerDuck)this.handler;
+        return (CreativeInventoryScreenHandlerDuck) this.handler;
     }
 
     //------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -265,20 +260,20 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
         @Shadow public abstract boolean shouldShowScrollbar();
 
-        //----------------------------------------
+        @Shadow protected abstract int getRow(float scroll);
 
-        @Unique private static final Logger LOGGER = LogManager.getLogger("CondensedCreative");
+        //----------------------------------------
 
         @Unique private boolean isEntryListDirty = true;
 
         @Unique private DefaultedList<Entry> defaultEntryList = DefaultedList.of();
         @Unique private DefaultedList<Entry> filteredEntryList = DefaultedList.of();
 
-        @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
-        private void scrollLineCount(CreativeInventoryScreen.CreativeScreenHandler instance, float position){
+        @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$CreativeScreenHandler;scrollItems(F)V"))
+        private void scrollLineCount(CreativeInventoryScreen.CreativeScreenHandler instance, float position, Operation<Void> original){
             this.markEntryListDirty();
 
-            this.scrollItems(0);
+            original.call(instance, position);
         }
 
         @Redirect(method = "shouldShowScrollbar", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;size()I"))
@@ -286,16 +281,34 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
             return this.filteredEntryList.size();
         }
 
-        @Override
-        public void scrollItems(int positionOffset){
-            if(isEntryListDirty()){
+        @Inject(method = "scrollItems", at = @At(value = "HEAD"))
+        private void setupFilterList(float position, CallbackInfo ci) {
+            if(this.isEntryListDirty){
                 Predicate<Entry> removeNonVisibleEntries = Entry::isVisible;
 
-                filteredEntryList.clear();
-                filteredEntryList.addAll(this.getDefaultEntryList().stream().filter(removeNonVisibleEntries).toList());
+                this.filteredEntryList.clear();
+                this.filteredEntryList.addAll(this.getDefaultEntryList().stream().filter(removeNonVisibleEntries).toList());
 
                 this.isEntryListDirty = false;
             }
+        }
+
+        /**
+         * @author Blodhgarm
+         * @reason adjusted to use filteredEntryList instead
+         */
+        @Overwrite
+        public void scrollItems(float position){
+            if(this.isEntryListDirty){
+                Predicate<Entry> removeNonVisibleEntries = Entry::isVisible;
+
+                this.filteredEntryList.clear();
+                this.filteredEntryList.addAll(this.getDefaultEntryList().stream().filter(removeNonVisibleEntries).toList());
+
+                this.isEntryListDirty = false;
+            }
+
+            int positionOffset = this.getRow(position);
 
             //---------------------------------------------
 
@@ -312,43 +325,20 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
             }
         }
 
-        @Override
-        public int getMaxRowCount(){
-            return !getFilteredEntryList().isEmpty() && this.shouldShowScrollbar() ? MathHelper.ceil((getFilteredEntryList().size() / 9F) - 5F) : 0;
+        /**
+         * @author Blodhgarm
+         * @reason adjusted to use filteredEntryList instead and prevent negative values
+         */
+        @Overwrite
+        public int getOverflowRows() {
+            return !this.filteredEntryList.isEmpty() && this.shouldShowScrollbar() ? MathHelper.ceil((this.filteredEntryList.size() / 9F) - 5F) : 0;
         }
 
         //----------
-
-        @Override
-        public DefaultedList<Entry> getFilteredEntryList() {
-            return this.filteredEntryList;
-        }
-
-        @Override
-        public void setFilteredEntryList(DefaultedList<Entry> EntryList) {
-            this.filteredEntryList = EntryList;
-        }
 
         @Override
         public DefaultedList<Entry> getDefaultEntryList() {
             return this.defaultEntryList;
-        }
-
-        @Override
-        public void setDefaultEntryList(DefaultedList<Entry> EntryList) {
-            this.defaultEntryList = EntryList;
-        }
-
-        //----------
-
-        @Override
-        public void addToDefaultEntryList(ItemStack stack) {
-            this.defaultEntryList.add(Entry.of(stack));
-        }
-
-        @Override
-        public boolean isEntryListDirty() {
-            return this.isEntryListDirty;
         }
 
         @Override

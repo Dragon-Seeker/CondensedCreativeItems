@@ -6,21 +6,11 @@ import net.minecraft.util.collection.DefaultedList;
 
 public interface CreativeInventoryScreenHandlerDuck {
 
-    DefaultedList<Entry> getFilteredEntryList();
-
-    void setFilteredEntryList(DefaultedList<Entry> EntryList);
+    void markEntryListDirty();
 
     DefaultedList<Entry> getDefaultEntryList();
 
-    void setDefaultEntryList(DefaultedList<Entry> EntryList);
-
-    void addToDefaultEntryList(ItemStack stack);
-
-    void scrollItems(int position);
-
-    int getMaxRowCount();
-
-    boolean isEntryListDirty();
-
-    void markEntryListDirty();
+    default void addToDefaultEntryList(ItemStack stack) {
+        this.getDefaultEntryList().add(Entry.of(stack));
+    }
 }

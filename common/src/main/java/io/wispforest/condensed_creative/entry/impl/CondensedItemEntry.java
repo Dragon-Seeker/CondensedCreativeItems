@@ -16,6 +16,7 @@ import net.minecraft.registry.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.text.WordUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
@@ -127,7 +128,7 @@ public class CondensedItemEntry extends ItemEntry {
         }
 
         private Builder(CondensedItemEntry entry){
-            this.currentEntry = new CondensedItemEntry(entry.condensedID, entry.itemStack, false);
+            this.currentEntry = new CondensedItemEntry(entry.condensedID, entry.getEntryStack(), false);
 
             this.currentEntry.condensedEntryTitle = entry.condensedEntryTitle;
             this.currentEntry.compareToItem = entry.compareToItem;
@@ -471,13 +472,12 @@ public class CondensedItemEntry extends ItemEntry {
             List<ItemStack> newListOrder = new ArrayList<>();
 
             for(int i = 0; i < itemGroupStacks.size(); i++){
-                ItemStack currentItemGroupStack = itemGroupStacks.get(i);
-
-                AtomicReference<ItemStack> foundChildStack = new AtomicReference<>(ItemStack.EMPTY);
+                var currentItemGroupStack = itemGroupStacks.get(i);
+                var foundChildStack = new MutableObject<>(ItemStack.EMPTY);
 
                 toBeChildren.removeIf(stack -> {
                     if(ItemEntry.hashcodeOfStack(currentItemGroupStack) == ItemEntry.hashcodeOfStack(stack)){
-                        foundChildStack.set(stack);
+                        foundChildStack.setValue(stack);
 
                         return true;
                     }
@@ -485,9 +485,7 @@ public class CondensedItemEntry extends ItemEntry {
                     return false;
                 });
 
-                if(foundChildStack.get() != ItemStack.EMPTY){
-                    newListOrder.add(foundChildStack.get());
-                }
+                if(foundChildStack.getValue() != ItemStack.EMPTY) newListOrder.add(foundChildStack.getValue());
             }
 
             if(!toBeChildren.isEmpty()) newListOrder.addAll(toBeChildren);

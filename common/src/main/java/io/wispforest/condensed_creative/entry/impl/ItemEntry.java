@@ -8,9 +8,9 @@ public class ItemEntry implements Entry {
 
     public static final ItemEntry EMPTY = new ItemEntry(ItemStack.EMPTY);
 
-    private boolean isVisible = true;
+    private final ItemStack itemStack;
 
-    public final ItemStack itemStack;
+    private boolean isVisible = true;
 
     public ItemEntry(ItemStack item){
         this.itemStack = item;
@@ -29,12 +29,12 @@ public class ItemEntry implements Entry {
 
     @Override
     public boolean isVisible() {
-        return isVisible;
+        return this.isVisible;
     }
 
     @Override
     public void toggleVisibility() {
-        isVisible = !isVisible;
+        this.isVisible = !this.isVisible;
     }
 
     //-------------
@@ -54,15 +54,13 @@ public class ItemEntry implements Entry {
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof Entry) {
-            return Entry.compareEntries(this, (Entry) obj);
-        } else {
-            return super.equals(obj);
-        }
+        return (obj instanceof Entry entry) ?
+                Entry.compareEntries(this, entry) :
+                super.equals(obj);
     }
 
     @Override
     public String toString() {
-        return getEntryStack().toString();
+        return this.getEntryStack().toString();
     }
 }

@@ -257,7 +257,7 @@ public final class CondensedEntryRegistry {
         ENTRYPOINT_LOADED_ENTRIES.clear();
 
         for(CondensedCreativeInitializer initializer : LoaderSpecificUtils.getEntryPoints()){
-            initializer.onInitializeCondensedEntries(true);
+            initializer.registerCondensedEntries(true);
         }
 
         for(Map.Entry<ItemGroupHelper, List<CondensedItemEntry>> entry : CondensedEntryRegistry.ENTRYPOINT_LOADED_ENTRIES.entrySet()){

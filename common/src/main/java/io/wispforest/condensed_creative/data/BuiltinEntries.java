@@ -222,7 +222,11 @@ public class BuiltinEntries implements CondensedCreativeInitializer {
                 .addToItemGroup(ItemGroups.NATURAL);
 
         CondensedEntryRegistry.of(CondensedCreative.createID("glass"), Blocks.WHITE_STAINED_GLASS,
-                        (item) -> item instanceof BlockItem blockItem && blockItem.getBlock() instanceof StainedGlassBlock)
+                (item) -> {
+                    var path = Registries.ITEM.getId(item).getPath();
+
+                    return path.contains("glass") && !path.contains("pane");
+                })
                 .toggleStrictFiltering(true)
                 .addToItemGroup(ItemGroups.COLORED_BLOCKS);
 
@@ -258,8 +262,13 @@ public class BuiltinEntries implements CondensedCreativeInitializer {
 //                .addToItemGroup(ItemGroups.BUILDING_BLOCKS);
 
 
-        CondensedEntryRegistry.of(CondensedCreative.createID("stained_glass_panes"), Blocks.GLASS_PANE,
-                predicateWithVanillaCheck((item) -> item instanceof BlockItem blockItem && blockItem.getBlock() instanceof StainedGlassPaneBlock))
+        CondensedEntryRegistry.of(CondensedCreative.createID("glass_panes"), Blocks.GLASS_PANE,
+                (item) -> {
+                    var path = Registries.ITEM.getId(item).getPath();
+
+                    return path.contains("glass") && path.contains("pane");
+                })
+                .toggleStrictFiltering(true)
                 .addToItemGroup(ItemGroups.COLORED_BLOCKS);
 
 
