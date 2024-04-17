@@ -2,7 +2,7 @@ package io.wispforest.condensed_creative.entry.impl;
 
 import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.mixins.ItemStackSetAccessor;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public class ItemEntry implements Entry {
 

@@ -1,30 +1,29 @@
 package io.wispforest.condensed_creative.util;
 
 import io.wispforest.condensed_creative.entry.Entry;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventories;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.recipe.RecipeMatcher;
-import net.minecraft.util.collection.DefaultedList;
-
 import java.util.List;
 import java.util.stream.Collectors;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.StackedContents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
-public class CondensedInventory extends SimpleInventory {
+public class CondensedInventory extends SimpleContainer {
 
-    private final DefaultedList<Entry> entryStacks;
+    private final NonNullList<Entry> entryStacks;
 
     public CondensedInventory(int size) {
         super(size);
 
-        this.entryStacks = DefaultedList.ofSize(size, Entry.EMPTY_ENTRY);
+        this.entryStacks = NonNullList.withSize(size, Entry.EMPTY_ENTRY);
     }
 
     @Override
-    public ItemStack getStack(int slot) {
+    public ItemStack getItem(int slot) {
         return slot >= 0 && slot < this.entryStacks.size() ? this.entryStacks.get(slot).getEntryStack() : ItemStack.EMPTY;
     }
 
@@ -36,31 +35,31 @@ public class CondensedInventory extends SimpleInventory {
      * Clears this util and return all the non-empty stacks in a list.
      */
     @Override
-    public List<ItemStack> clearToList() {
+    public List<ItemStack> removeAllItems() {
         List<ItemStack> list = (List)this.entryStacks.stream().filter(entry -> !entry.isEmpty()).map(Entry::getEntryStack).collect(Collectors.toList());
-        this.clear();
+        this.clearContent();
         return list;
     }
 
     @Override
-    public ItemStack removeStack(int slot, int amount) {
-        ItemStack itemStack = Inventories.splitStack(getItemStackList(), slot, amount);
+    public ItemStack removeItem(int slot, int amount) {
+        ItemStack itemStack = ContainerHelper.removeItem(getItemStackList(), slot, amount);
         if (!itemStack.isEmpty()) {
-            this.markDirty();
+            this.setChanged();
         }
 
         return itemStack;
     }
 
-    public ItemStack removeItem(Item item, int count) {
+    public ItemStack removeItemType(Item item, int count) {
         ItemStack itemStack = new ItemStack(item, 0);
 
-        for(int i = this.size - 1; i >= 0; --i) {
-            ItemStack itemStack2 = this.getStack(i);
+        for(int i = this.getContainerSize() - 1; i >= 0; --i) {
+            ItemStack itemStack2 = this.getItem(i);
             if (itemStack2.getItem().equals(item)) {
                 int j = count - itemStack.getCount();
                 ItemStack itemStack3 = itemStack2.split(j);
-                itemStack.increment(itemStack3.getCount());
+                itemStack.grow(itemStack3.getCount());
                 if (itemStack.getCount() == count) {
                     break;
                 }
@@ -68,18 +67,18 @@ public class CondensedInventory extends SimpleInventory {
         }
 
         if (!itemStack.isEmpty()) {
-            this.markDirty();
+            this.setChanged();
         }
 
         return itemStack;
     }
 
     @Override
-    public boolean canInsert(ItemStack stack) {
+    public boolean canAddItem(ItemStack stack) {
         boolean bl = false;
 
         for(ItemStack itemStack : getItemStackList()) {
-            if (itemStack.isEmpty() || ItemStack.canCombine(itemStack, stack) && itemStack.getCount() < itemStack.getMaxCount()) {
+            if (itemStack.isEmpty() || ItemStack.isSameItemSameTags(itemStack, stack) && itemStack.getCount() < itemStack.getMaxStackSize()) {
                 bl = true;
                 break;
             }
@@ -89,8 +88,8 @@ public class CondensedInventory extends SimpleInventory {
     }
 
     @Override
-    public ItemStack removeStack(int slot) {
-        ItemStack itemStack = getStack(slot);
+    public ItemStack removeItemNoUpdate(int slot) {
+        ItemStack itemStack = getItem(slot);
         if (itemStack.isEmpty()) {
             return ItemStack.EMPTY;
         } else {
@@ -100,24 +99,24 @@ public class CondensedInventory extends SimpleInventory {
     }
 
     @Override
-    public void setStack(int slot, ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
         this.entryStacks.set(slot, Entry.of(stack));
-        if (!stack.isEmpty() && stack.getCount() > this.getMaxCountPerStack()) {
-            stack.setCount(this.getMaxCountPerStack());
+        if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
         }
 
-        this.markDirty();
+        this.setChanged();
     }
 
     public void setEntryStack(int slot, Entry entryStack) {
         this.entryStacks.set(slot, entryStack);
 
         ItemStack stack = entryStack.getEntryStack();
-        if (!stack.isEmpty() && stack.getCount() > this.getMaxCountPerStack()) {
-            stack.setCount(this.getMaxCountPerStack());
+        if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
         }
 
-        this.markDirty();
+        this.setChanged();
     }
 
     @Override
@@ -132,26 +131,26 @@ public class CondensedInventory extends SimpleInventory {
     }
 
     @Override
-    public void markDirty() {
-        super.markDirty();
+    public void setChanged() {
+        super.setChanged();
 
     }
 
     @Override
-    public boolean canPlayerUse(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return true;
     }
 
     @Override
-    public void clear() {
+    public void clearContent() {
         this.entryStacks.clear();
-        this.clear();
+        this.clearContent();
     }
 
     @Override
-    public void provideRecipeInputs(RecipeMatcher finder) {
+    public void fillStackedContents(StackedContents finder) {
         for(ItemStack itemStack : getItemStackList()) {
-            finder.addInput(itemStack);
+            finder.accountStack(itemStack);
         }
 
     }
@@ -161,11 +160,11 @@ public class CondensedInventory extends SimpleInventory {
     }
 
     //TODO: WHY IS THIS HERE?
-    public void readNbtList(NbtList nbtList) {
+    public void fromTag(ListTag nbtList) {
         for(int i = 0; i < nbtList.size(); ++i) {
-            ItemStack itemStack = ItemStack.fromNbt(nbtList.getCompound(i));
+            ItemStack itemStack = ItemStack.of(nbtList.getCompound(i));
             if (!itemStack.isEmpty()) {
-                this.addStack(itemStack);
+                this.addItem(itemStack);
             }
         }
     }

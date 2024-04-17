@@ -1,24 +1,24 @@
 package io.wispforest.condensed_creative.compat;
 
-import net.minecraft.item.ItemGroup;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.CreativeModeTab;
 
 /**
  * A Handler for ItemGroups that may have various tabs within the given ItemGroup
  */
-public abstract class ItemGroupVariantHandler<I extends ItemGroup> {
+public abstract class ItemGroupVariantHandler<I extends CreativeModeTab> {
 
-    private static final Map<Identifier, ItemGroupVariantHandler<?>> VARIANT_HANDLERS = new HashMap<>();
+    private static final Map<ResourceLocation, ItemGroupVariantHandler<?>> VARIANT_HANDLERS = new HashMap<>();
 
     private final Class<I> clazz;
-    private final Identifier id;
+    private final ResourceLocation id;
 
-    protected ItemGroupVariantHandler(Class<I> clazz, Identifier id){
+    protected ItemGroupVariantHandler(Class<I> clazz, ResourceLocation id){
         this.clazz = clazz;
         this.id = id;
     }
@@ -29,7 +29,7 @@ public abstract class ItemGroupVariantHandler<I extends ItemGroup> {
      * Attempts to register a given {@link ItemGroupVariantHandler} to the main registry
      * with check to see if an existing handler for the same ItemGroup clazz exists
      */
-    public static <I extends ItemGroup> void registerOptional(ItemGroupVariantHandler<I> handler){
+    public static <I extends CreativeModeTab> void registerOptional(ItemGroupVariantHandler<I> handler){
         for (ItemGroupVariantHandler<?> value : VARIANT_HANDLERS.values()) {
             if(value.clazz.equals(handler.clazz)) return;
         }
@@ -40,7 +40,7 @@ public abstract class ItemGroupVariantHandler<I extends ItemGroup> {
     /**
      * Register a given {@link ItemGroupVariantHandler} to the main registry
      */
-    public static <I extends ItemGroup> void register(ItemGroupVariantHandler<I> handler){
+    public static <I extends CreativeModeTab> void register(ItemGroupVariantHandler<I> handler){
         var id = handler.getIdentifier();
 
         if(VARIANT_HANDLERS.containsKey(id)){
@@ -54,7 +54,7 @@ public abstract class ItemGroupVariantHandler<I extends ItemGroup> {
      * Attempt to return an any handler for the given ItemGroup or null if not none are found
      */
     @Nullable
-    public static ItemGroupVariantHandler<?> getHandler(ItemGroup itemGroup){
+    public static ItemGroupVariantHandler<?> getHandler(CreativeModeTab itemGroup){
         for (var handler : VARIANT_HANDLERS.values()) {
             if(handler.isVariant(itemGroup)) return handler;
         }
@@ -72,30 +72,30 @@ public abstract class ItemGroupVariantHandler<I extends ItemGroup> {
     //--
 
     /**
-     * @return whether the {@link ItemGroup} is of the targeted variant
+     * @return whether the {@link CreativeModeTab} is of the targeted variant
      */
-    public final boolean isVariant(ItemGroup group){
+    public final boolean isVariant(CreativeModeTab group){
         return clazz.isInstance(group);
     }
 
     /**
      * Unique Identifier representing the Variant handler
      */
-    public final Identifier getIdentifier(){
+    public final ResourceLocation getIdentifier(){
         return this.id;
     }
 
     //--
 
     /**
-     * @return Collection of all selected tabs of the given {@link ItemGroup} Variant
+     * @return Collection of all selected tabs of the given {@link CreativeModeTab} Variant
      */
-    public abstract Collection<Integer> getSelectedTabs(ItemGroup group);
+    public abstract Collection<Integer> getSelectedTabs(CreativeModeTab group);
 
     /**
-     * @return Get max tabs supported by this {@link ItemGroup} Variant
+     * @return Get max tabs supported by this {@link CreativeModeTab} Variant
      */
-    public abstract int getMaxTabs(ItemGroup group);
+    public abstract int getMaxTabs(CreativeModeTab group);
 
     //--
 

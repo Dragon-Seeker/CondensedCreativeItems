@@ -6,8 +6,8 @@ import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.ConfigHolder;
 import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionResult;
 
 public class CondensedCreative {
 
@@ -28,7 +28,7 @@ public class CondensedCreative {
         MAIN_CONFIG.registerSaveListener((configHolder, condensedCreativeConfig) -> {
             CondensedEntryRegistry.refreshEntrypoints();
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         });
 
         for(CondensedCreativeInitializer initializer : LoaderSpecificUtils.getEntryPoints()){
@@ -48,8 +48,8 @@ public class CondensedCreative {
         return DEBUG_ENV || DEBUG;
     }
 
-    public static Identifier createID(String path){
-        return new Identifier(MODID, path);
+    public static ResourceLocation createID(String path){
+        return new ResourceLocation(MODID, path);
     }
 
     //---------------------------------------------------------------------------------------------------------

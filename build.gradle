@@ -1,6 +1,6 @@
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "dev.architectury.loom" version "1.5-SNAPSHOT" apply false
+    id "dev.architectury.loom" version "1.6-SNAPSHOT" apply false
 }
 
 architectury {
@@ -14,12 +14,17 @@ subprojects {
         silentMojangMappingsLicense()
     }
 
+    repositories {
+        maven { url "https://maven.parchmentmc.org" }
+    }
+
     dependencies {
         minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-        // The following line declares the mojmap mappings, you may use other mappings as well
-        //mappings loom.officialMojangMappings()
-        // The following line declares the yarn mappings you may select this one as well.
-        mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+
+        mappings loom.layered() {
+            officialMojangMappings()
+            parchment("org.parchmentmc.data:parchment-1.20.4:2024.04.14@zip")
+        }
     }
 }
 

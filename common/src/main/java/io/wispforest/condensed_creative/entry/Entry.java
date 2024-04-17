@@ -1,7 +1,7 @@
 package io.wispforest.condensed_creative.entry;
 
 import io.wispforest.condensed_creative.entry.impl.ItemEntry;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public interface Entry {
 

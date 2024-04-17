@@ -7,50 +7,50 @@ import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.resource.JsonDataLoader;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.profiler.Profiler;
 import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 
-public class CondensedEntriesLoader extends JsonDataLoader {
+public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    private static final Map<Identifier, CondensedItemEntry.Builder> LOCAL_ENTRIES = new HashMap<>();
+    private static final Map<ResourceLocation, CondensedItemEntry.Builder> LOCAL_ENTRIES = new HashMap<>();
     private static boolean checkLocalEntries = false;
 
-    private static final List<ItemGroup> BLACKLISTED_ITEM_GROUPS = Stream.of(
-            ItemGroups.HOTBAR,
-            ItemGroups.SEARCH,
-            ItemGroups.OPERATOR
-    ).map(Registries.ITEM_GROUP::get).toList();
+    private static final List<CreativeModeTab> BLACKLISTED_ITEM_GROUPS = Stream.of(
+            CreativeModeTabs.HOTBAR,
+            CreativeModeTabs.SEARCH,
+            CreativeModeTabs.OP_BLOCKS
+    ).map(BuiltInRegistries.CREATIVE_MODE_TAB::get).toList();
 
     public CondensedEntriesLoader() {
         super(GSON, "condensed_entries");
     }
 
     @Override
-    protected void apply(Map<Identifier, JsonElement> prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(Map<ResourceLocation, JsonElement> prepared, ResourceManager manager, ProfilerFiller profiler) {
         LOGGER.info("[CondensedEntriesLoader]: Starting loading!");
 
         if(!CondensedEntryRegistry.RESOURCE_LOADED_ENTRIES.isEmpty()) CondensedEntryRegistry.RESOURCE_LOADED_ENTRIES.clear();
 
-        List<ItemGroup> ITEM_GROUPS = new ArrayList<>(ItemGroups.getGroups());
+        List<CreativeModeTab> ITEM_GROUPS = new ArrayList<>(CreativeModeTabs.allTabs());
 
         ITEM_GROUPS.removeAll(BLACKLISTED_ITEM_GROUPS);
 
@@ -65,11 +65,11 @@ public class CondensedEntriesLoader extends JsonDataLoader {
         LOGGER.info("[CondensedEntriesLoader]: Ending loading!");
     }
 
-    private static List<CondensedItemEntry> deserializeFile(Identifier id, JsonObject json, List<ItemGroup> itemGroups) {
+    private static List<CondensedItemEntry> deserializeFile(ResourceLocation id, JsonObject json, List<CreativeModeTab> itemGroups) {
        Map<String, JsonElement> jsonMap = json.asMap();
 
         if(json.has("debug_entries")){
-            boolean debug_entries = JsonHelper.getBoolean(json, "debug_entries");
+            boolean debug_entries = GsonHelper.getAsBoolean(json, "debug_entries");
 
             if(debug_entries && !CondensedCreative.isDeveloperMode()) return List.of();
 
@@ -86,7 +86,7 @@ public class CondensedEntriesLoader extends JsonDataLoader {
             JsonObject entriesJson = json.getAsJsonObject("sharded_entries");
 
             for(Map.Entry<String, JsonElement> entryJson : entriesJson.entrySet()){
-                Identifier entryId = Identifier.tryParse(entryJson.getKey());
+                ResourceLocation entryId = ResourceLocation.tryParse(entryJson.getKey());
 
                 if(entryId == null){
                     LOGGER.error("[CondensedEntryLoader]: A given Condensed Entry has a invalid Identifier: [FileID: {}, EntryID: {}]", id, entryJson.getKey());
@@ -105,10 +105,10 @@ public class CondensedEntriesLoader extends JsonDataLoader {
         List<CondensedItemEntry> entries = new ArrayList<>();
 
         for(Map.Entry<String, JsonElement> itemGroupEntries : jsonMap.entrySet()){
-            Identifier itemGroupId = new Identifier(itemGroupEntries.getKey());
+            ResourceLocation itemGroupId = new ResourceLocation(itemGroupEntries.getKey());
 
-            Optional<ItemGroup> possibleItemGroup = itemGroups.stream()
-                    .filter(group -> Objects.equals(Registries.ITEM_GROUP.getId(group), itemGroupId)).findFirst();
+            Optional<CreativeModeTab> possibleItemGroup = itemGroups.stream()
+                    .filter(group -> Objects.equals(BuiltInRegistries.CREATIVE_MODE_TAB.getKey(group), itemGroupId)).findFirst();
 
             if(possibleItemGroup.isEmpty()){
                 LOGGER.error("[CondensedEntryLoader]: A Invaild Itemgroup name was given so no Entries are loaded from it: [FileID: {}, GroupID: {}]", id, itemGroupId);
@@ -169,14 +169,14 @@ public class CondensedEntriesLoader extends JsonDataLoader {
         return entries;
     }
 
-    private static Optional<CondensedItemEntry.Builder> deserializeEntry(Identifier fileID, String key, JsonElement jsonData){
+    private static Optional<CondensedItemEntry.Builder> deserializeEntry(ResourceLocation fileID, String key, JsonElement jsonData){
         if(!(jsonData instanceof JsonObject jsonObject)) {
             LOGGER.error("[CondensedEntryLoader]: A given Entry was attempted to be read but was malformed: [FileID: {}, EntryID: {}]", fileID, key);
 
             return Optional.empty();
         }
 
-        Identifier entryId = Identifier.tryParse(key);
+        ResourceLocation entryId = ResourceLocation.tryParse(key);
 
         if(entryId == null){
             LOGGER.error("[CondensedEntryLoader]: A given Condensed Entry has a invalid Identifier: [FileID: {}, EntryID: {}]", fileID, key);
@@ -193,7 +193,7 @@ public class CondensedEntriesLoader extends JsonDataLoader {
             Item item;
 
             try {
-                item = JsonHelper.getItem(jsonObject, "base_item").value();
+                item = GsonHelper.getAsItem(jsonObject, "base_item").value();
             } catch (JsonSyntaxException e){
                 LOGGER.warn("[CondensedEntryLoader]: The Base Item for a given entry was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, key);
                 LOGGER.warn(e.getMessage());
@@ -202,19 +202,19 @@ public class CondensedEntriesLoader extends JsonDataLoader {
             }
 
             if (jsonObject.has("item_tag")) {
-                TagKey<Item> itemTagKey = TagKey.of(RegistryKeys.ITEM, Identifier.tryParse(JsonHelper.getString(jsonObject, "item_tag")));
+                TagKey<Item> itemTagKey = TagKey.create(Registries.ITEM, ResourceLocation.tryParse(GsonHelper.getAsString(jsonObject, "item_tag")));
 
                 builder = CondensedEntryRegistry.fromTag(entryId, item, itemTagKey);
 
             } else if (jsonObject.has("block_tag")) {
-                TagKey<Block> itemTagKey = TagKey.of(RegistryKeys.BLOCK, Identifier.tryParse(JsonHelper.getString(jsonObject, "block_tag")));
+                TagKey<Block> itemTagKey = TagKey.create(Registries.BLOCK, ResourceLocation.tryParse(GsonHelper.getAsString(jsonObject, "block_tag")));
 
                 builder = CondensedEntryRegistry.fromTag(entryId, item, itemTagKey);
 
             } else if (jsonObject.has("items")) {
                 List<Item> items = new ArrayList<>();
 
-                JsonHelper.getArray(jsonObject, "items").forEach(jsonElement -> items.add(JsonHelper.asItem(jsonElement, jsonElement.getAsString()).value()));
+                GsonHelper.getAsJsonArray(jsonObject, "items").forEach(jsonElement -> items.add(GsonHelper.convertToItem(jsonElement, jsonElement.getAsString()).value()));
 
                 builder = CondensedEntryRegistry.fromItems(entryId, item, items);
             } else {
@@ -243,7 +243,7 @@ public class CondensedEntriesLoader extends JsonDataLoader {
                         builder.setTitleFromTag();
                     }
                 } else {
-                    Text text = Text.Serialization.fromJsonTree(element);
+                    Component text = Component.Serializer.fromJson(element);
 
                     builder.setTitle(text);
                 }
@@ -257,7 +257,7 @@ public class CondensedEntriesLoader extends JsonDataLoader {
             JsonElement element = jsonObject.get("description");
 
             try {
-                Text text = Text.Serialization.fromJsonTree(element);
+                Component text = Component.Serializer.fromJson(element);
 
                 builder.setDescription(text);
             } catch (JsonParseException e){

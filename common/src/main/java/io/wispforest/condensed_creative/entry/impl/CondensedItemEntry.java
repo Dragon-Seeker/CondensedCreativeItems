@@ -5,17 +5,17 @@ import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
-import net.minecraft.block.Block;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.*;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.*;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.text.WordUtils;
 import org.jetbrains.annotations.ApiStatus;
@@ -23,7 +23,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -33,17 +32,17 @@ public class CondensedItemEntry extends ItemEntry {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final Map<Identifier, Boolean> CHILD_VISIBILITY = new HashMap<>();
+    public static final Map<ResourceLocation, Boolean> CHILD_VISIBILITY = new HashMap<>();
 
     //-------------------------------------------
 
-    public final Identifier condensedID;
+    public final ResourceLocation condensedID;
 
     @Nullable private Supplier<List<ItemStack>> childrenSupplier = null;
 
-    @Nullable private Supplier<Text> condensedEntryTitleBuilder = null;
+    @Nullable private Supplier<Component> condensedEntryTitleBuilder = null;
 
-    private Text condensedEntryTitle;
+    private Component condensedEntryTitle;
 
     private boolean compareToItem = false;
 
@@ -57,11 +56,11 @@ public class CondensedItemEntry extends ItemEntry {
 
     //-------------------------------------------
 
-    private @Nullable Text descriptionText = null;
+    private @Nullable Component descriptionText = null;
 
     private @Nullable Consumer<List<ItemStack>> entrySorting = null;
 
-    private @Nullable TagKey<? extends ItemConvertible> tagKey = null;
+    private @Nullable TagKey<? extends ItemLike> tagKey = null;
 
     //-------------------------------------------
 
@@ -73,19 +72,19 @@ public class CondensedItemEntry extends ItemEntry {
 
     //-------------------------------------------
 
-    private CondensedItemEntry(Identifier identifier, ItemStack defaultStack, boolean isChild) {
+    private CondensedItemEntry(ResourceLocation identifier, ItemStack defaultStack, boolean isChild) {
         super(defaultStack);
 
         this.condensedID = identifier;
         this.isChild = isChild;
 
-        this.condensedEntryTitle = Text.of(Arrays.stream(identifier.getPath().split("_")).map(WordUtils::capitalize).collect(Collectors.joining(" ")));
+        this.condensedEntryTitle = Component.nullToEmpty(Arrays.stream(identifier.getPath().split("_")).map(WordUtils::capitalize).collect(Collectors.joining(" ")));
 
         CHILD_VISIBILITY.put(identifier, false);
     }
 
     @ApiStatus.Internal
-    private static CondensedItemEntry createChild(Identifier condensedID, ItemStack defaultItemstack) {
+    private static CondensedItemEntry createChild(ResourceLocation condensedID, ItemStack defaultItemstack) {
         return new CondensedItemEntry(condensedID, defaultItemstack, true);
     }
 
@@ -95,27 +94,27 @@ public class CondensedItemEntry extends ItemEntry {
 
         public final CondensedItemEntry currentEntry;
 
-        public Builder(Identifier condensedID, ItemStack defaultItemstack, Supplier<List<ItemStack>> entryListSupplier) {
+        public Builder(ResourceLocation condensedID, ItemStack defaultItemstack, Supplier<List<ItemStack>> entryListSupplier) {
             this.currentEntry = new CondensedItemEntry(condensedID, defaultItemstack, false);
 
             this.currentEntry.childrenSupplier = entryListSupplier;
         }
 
-        public Builder(Identifier condensedID, ItemStack defaultItemstack, Collection<ItemStack> entries) {
+        public Builder(ResourceLocation condensedID, ItemStack defaultItemstack, Collection<ItemStack> entries) {
             this.currentEntry = new CondensedItemEntry(condensedID, defaultItemstack, false);
 
             this.currentEntry.childrenSupplier = () -> new ArrayList<>(entries);
         }
 
-        public <T extends ItemConvertible> Builder(Identifier condensedID, ItemStack defaultItemstack, @Nullable Predicate<Item> entryPredicate, @Nullable TagKey<T> tagKey) {
+        public <T extends ItemLike> Builder(ResourceLocation condensedID, ItemStack defaultItemstack, @Nullable Predicate<Item> entryPredicate, @Nullable TagKey<T> tagKey) {
             this.currentEntry = new CondensedItemEntry(condensedID, defaultItemstack, false);
 
             if(entryPredicate != null) {
                 this.currentEntry.childrenSupplier = () -> {
                     List<ItemStack> stacks = new ArrayList<>();
 
-                    Registries.ITEM.forEach(item1 -> {
-                        if (entryPredicate.test(item1)) stacks.add(item1.getDefaultStack());
+                    BuiltInRegistries.ITEM.forEach(item1 -> {
+                        if (entryPredicate.test(item1)) stacks.add(item1.getDefaultInstance());
                     });
 
                     return stacks;
@@ -153,18 +152,18 @@ public class CondensedItemEntry extends ItemEntry {
         }
 
         /**
-         * Sets the tooltip title text to be based of the given {@link Text} Supplier
+         * Sets the tooltip title text to be based of the given {@link Component} Supplier
          */
-        public Builder setTitleSupplier(Supplier<Text> condensedEntryTitle){
+        public Builder setTitleSupplier(Supplier<Component> condensedEntryTitle){
             this.currentEntry.condensedEntryTitleBuilder = condensedEntryTitle;
 
             return this;
         }
 
         /**
-         * Sets the tooltip title text to be based of the given {@link Text}
+         * Sets the tooltip title text to be based of the given {@link Component}
          */
-        public Builder setTitle(Text condensedEntryTitle){
+        public Builder setTitle(Component condensedEntryTitle){
             this.currentEntry.condensedEntryTitle = condensedEntryTitle;
 
             return this;
@@ -175,7 +174,7 @@ public class CondensedItemEntry extends ItemEntry {
          */
         public Builder setTitleFromTag(){
             if(this.currentEntry.tagKey != null){
-                this.currentEntry.condensedEntryTitle = Text.of(Arrays.stream(this.currentEntry.tagKey.id().getPath().split("_")).map(WordUtils::capitalize).collect(Collectors.joining(" ")));
+                this.currentEntry.condensedEntryTitle = Component.nullToEmpty(Arrays.stream(this.currentEntry.tagKey.location().getPath().split("_")).map(WordUtils::capitalize).collect(Collectors.joining(" ")));
             }
 
             return this;
@@ -184,7 +183,7 @@ public class CondensedItemEntry extends ItemEntry {
         /**
          * Adds description onto the Entries tooltip
          */
-        public Builder setDescription(Text description){
+        public Builder setDescription(Component description){
             this.currentEntry.descriptionText = description;
 
             return this;
@@ -219,40 +218,40 @@ public class CondensedItemEntry extends ItemEntry {
         }
 
         /**
-         * Used to add the {@link CondensedItemEntry} to a certain {@link ItemGroup}
+         * Used to add the {@link CondensedItemEntry} to a certain {@link CreativeModeTab}
          */
-        public CondensedItemEntry addToItemGroup(ItemGroup itemGroup){
+        public CondensedItemEntry addToItemGroup(CreativeModeTab itemGroup){
             return addToItemGroup(itemGroup, -1);
         }
 
-        public CondensedItemEntry addToItemGroup(RegistryKey<ItemGroup> itemGroup){
+        public CondensedItemEntry addToItemGroup(ResourceKey<CreativeModeTab> itemGroup){
             return addToItemGroup(itemGroup, -1);
         }
 
         /**
-         * Used to add the {@link CondensedItemEntry} to a certain {@link ItemGroup} with tab index support if using a Supported ItemGroup Variant with tabs
+         * Used to add the {@link CondensedItemEntry} to a certain {@link CreativeModeTab} with tab index support if using a Supported ItemGroup Variant with tabs
          */
-        public CondensedItemEntry addToItemGroup(ItemGroup itemGroup, int tabIndex){
+        public CondensedItemEntry addToItemGroup(CreativeModeTab itemGroup, int tabIndex){
             return addToItemGroup(ItemGroupHelper.of(itemGroup, tabIndex), true);
         }
 
-        public CondensedItemEntry addToItemGroup(RegistryKey<ItemGroup> itemGroup, int tabIndex){
+        public CondensedItemEntry addToItemGroup(ResourceKey<CreativeModeTab> itemGroup, int tabIndex){
             return addToItemGroup(ItemGroupHelper.of(itemGroup, tabIndex), true);
         }
 
-        public List<CondensedItemEntry> addToItemGroups(ItemGroup ...groups){
+        public List<CondensedItemEntry> addToItemGroups(CreativeModeTab ...groups){
             return this.addToItemGroups(true, Arrays.stream(groups).map(group -> ItemGroupHelper.of(group, 0)).toArray(ItemGroupHelper[]::new));
         }
 
         @SafeVarargs
-        public final List<CondensedItemEntry> addToItemGroups(RegistryKey<ItemGroup>... groups){
+        public final List<CondensedItemEntry> addToItemGroups(ResourceKey<CreativeModeTab>... groups){
             return this.addToItemGroups(true, Arrays.stream(groups).map(group -> ItemGroupHelper.of(group, 0)).toArray(ItemGroupHelper[]::new));
         }
 
         public List<CondensedItemEntry> addToItemGroups(boolean addToMainEntriesMap, ItemGroupHelper... helpers){
             List<CondensedItemEntry> condensedItemEntries = new ArrayList<>();
 
-            CondensedItemEntry.Builder builder = this;
+            Builder builder = this;
 
             for(ItemGroupHelper helper : helpers){
                 condensedItemEntries.add(builder.addToItemGroup(helper, addToMainEntriesMap));
@@ -329,19 +328,19 @@ public class CondensedItemEntry extends ItemEntry {
         if(childrenSupplier != null) return childrenSupplier.get();
 
         if(tagKey != null) {
-            Registries.ITEM.forEach(item1 -> { if (withinEntriesTag(item1)) stacks.add(item1.getDefaultStack()); });
+            BuiltInRegistries.ITEM.forEach(item1 -> { if (withinEntriesTag(item1)) stacks.add(item1.getDefaultInstance()); });
         }
 
         return stacks;
     }
 
-    private <T extends ItemConvertible> boolean withinEntriesTag(Item item) {
+    private <T extends ItemLike> boolean withinEntriesTag(Item item) {
         if(tagKey == null) return false;
 
-        if(tagKey.isOf(RegistryKeys.ITEM)){
-            return item.getRegistryEntry().isIn((TagKey<Item>) tagKey);
-        } else if(tagKey.isOf(RegistryKeys.BLOCK)) {
-            return item instanceof BlockItem blockItem && blockItem.getBlock().getRegistryEntry().isIn((TagKey<Block>) tagKey);
+        if(tagKey.isFor(Registries.ITEM)){
+            return item.builtInRegistryHolder().is((TagKey<Item>) tagKey);
+        } else if(tagKey.isFor(Registries.BLOCK)) {
+            return item instanceof BlockItem blockItem && blockItem.getBlock().builtInRegistryHolder().is((TagKey<Block>) tagKey);
         } else {
             LOGGER.warn("[CondensedEntryRegistry]: It seems that a Condensed Entry was somehow registered with Tag that isn't part of the Item or Block Registry: [Id: {}]", this.condensedID);
         }
@@ -406,7 +405,7 @@ public class CondensedItemEntry extends ItemEntry {
         if(!isChild) CHILD_VISIBILITY.replace(this.condensedID, !CHILD_VISIBILITY.get(this.condensedID));
     }
 
-    public void getParentTooltipText(List<Text> tooltipData, PlayerEntity player, TooltipContext context) {
+    public void getParentTooltipText(List<Component> tooltipData, Player player, TooltipFlag context) {
         if(condensedEntryTitleBuilder != null){
             condensedEntryTitle = this.condensedEntryTitleBuilder.get();
 
@@ -420,13 +419,13 @@ public class CondensedItemEntry extends ItemEntry {
         }
 
         if(tagKey != null && CondensedCreative.getConfig().tagPreviewForEntries){
-            tooltipData.add(Text.of("Tag: #" + tagKey.id().toString()).copy().formatted(Formatting.GRAY));
+            tooltipData.add(Component.nullToEmpty("Tag: #" + tagKey.location().toString()).copy().withStyle(ChatFormatting.GRAY));
         }
 
         if(CondensedCreative.getConfig().debugIdentifiersForEntries) {
-            tooltipData.add(Text.of(""));
+            tooltipData.add(Component.nullToEmpty(""));
 
-            tooltipData.add(Text.of("EntryID: " + condensedID.toString()).copy().formatted(Formatting.GRAY));
+            tooltipData.add(Component.nullToEmpty("EntryID: " + condensedID.toString()).copy().withStyle(ChatFormatting.GRAY));
         }
     }
 

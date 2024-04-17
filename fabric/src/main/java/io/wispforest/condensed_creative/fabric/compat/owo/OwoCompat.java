@@ -3,19 +3,18 @@ package io.wispforest.condensed_creative.fabric.compat.owo;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.fabric.CondensedCreativeFabric;
-import io.wispforest.condensed_creative.mixins.ItemGroupAccessor;
+import io.wispforest.condensed_creative.mixins.client.CreativeModeTabAccessor;
 import io.wispforest.owo.itemgroup.Icon;
 import io.wispforest.owo.itemgroup.OwoItemGroup;
 import io.wispforest.owo.itemgroup.gui.ItemGroupTab;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-
 import java.util.List;
 import java.util.function.Function;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 
 public class OwoCompat {
 
@@ -24,23 +23,23 @@ public class OwoCompat {
 
         if (CondensedCreative.isDeveloperMode()) {
             CondensedCreativeFabric.createOwoItemGroup = () -> {
-                OwoItemGroup owoItemGroup = OwoItemGroup.builder(CondensedCreative.createID("test"), () -> Icon.of(Blocks.BEDROCK.asItem().getDefaultStack()))
+                OwoItemGroup owoItemGroup = OwoItemGroup.builder(CondensedCreative.createID("test"), () -> Icon.of(Blocks.BEDROCK.asItem().getDefaultInstance()))
                         .initializer(group -> {
-                            Function<RegistryKey<ItemGroup>, ItemGroup> func = Registries.ITEM_GROUP::get;
+                            Function<ResourceKey<CreativeModeTab>, CreativeModeTab> func = BuiltInRegistries.CREATIVE_MODE_TAB::get;
 
                             addTabToList(group.tabs, group, Icon.of(Blocks.BRICKS), "building_blocks", true, (enabledFeatures, entries) -> {
-                                ((ItemGroupAccessor) func.apply(ItemGroups.BUILDING_BLOCKS))
-                                        .cc$getEntryCollector()
+                                ((CreativeModeTabAccessor) func.apply(CreativeModeTabs.BUILDING_BLOCKS))
+                                        .cc$getDisplayItemsGenerator()
                                         .accept(enabledFeatures, entries);
                             });
                             addTabToList(group.tabs, group, Icon.of(Blocks.PEONY), "colored_blocks", false, (enabledFeatures, entries) -> {
-                                ((ItemGroupAccessor) func.apply(ItemGroups.COLORED_BLOCKS))
-                                        .cc$getEntryCollector()
+                                ((CreativeModeTabAccessor) func.apply(CreativeModeTabs.COLORED_BLOCKS))
+                                        .cc$getDisplayItemsGenerator()
                                         .accept(enabledFeatures, entries);
                             });
                             addTabToList(group.tabs, group, Icon.of(Items.IRON_INGOT), "ingredients", false, (enabledFeatures, entries) -> {
-                                ((ItemGroupAccessor) func.apply(ItemGroups.INGREDIENTS))
-                                        .cc$getEntryCollector()
+                                ((CreativeModeTabAccessor) func.apply(CreativeModeTabs.INGREDIENTS))
+                                        .cc$getDisplayItemsGenerator()
                                         .accept(enabledFeatures, entries);
                             });
                         }).build();

@@ -4,12 +4,13 @@
   "compatibilityLevel": "JAVA_17",
   "minVersion": "0.8",
   "mixins": [
-    "CreativeScreenHandlerAccessor",
-    "ItemGroupAccessor",
     "ItemStackSetAccessor"
   ],
   "client": [
-    "NbtCompoundAccessor",
+    "client.CreativeModeInventoryScreenAccessor",
+    "client.CreativeModeTabsAccessor",
+    "client.CreativeScreenHandlerAccessor",
+    "client.CreativeModeTabAccessor",
     "client.CreativeInventoryScreenMixin",
     "client.CreativeInventoryScreenMixin$CreativeInventoryScreenHandlerMixin",
     "client.HandledScreenAccessor",

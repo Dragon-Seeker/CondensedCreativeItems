@@ -6,23 +6,21 @@ import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.util.CondensedInventory;
 import me.shedaniel.math.Color;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.util.Identifier;
-import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.Slot;
 
 public class SlotRenderUtils {
 
-    private static final Identifier PLUS_ICON = CondensedCreative.createID("textures/gui/plus_logo.png");
-    private static final Identifier MINUS_ICON = CondensedCreative.createID("textures/gui/minus_logo.png");
+    private static final ResourceLocation PLUS_ICON = CondensedCreative.createID("textures/gui/plus_logo.png");
+    private static final ResourceLocation MINUS_ICON = CondensedCreative.createID("textures/gui/minus_logo.png");
 
-    public static void renderExtraIfEntry(HandledScreen screen, DrawContext context, Slot slot){
-        if(!(screen instanceof CreativeInventoryScreen && slot.inventory instanceof CondensedInventory inv)) return;
+    public static void renderExtraIfEntry(AbstractContainerScreen screen, GuiGraphics context, Slot slot){
+        if(!(screen instanceof CreativeModeInventoryScreen && slot.container instanceof CondensedInventory inv)) return;
 
-        Entry entryStack = inv.getEntryStack(slot.getIndex());
+        Entry entryStack = inv.getEntryStack(slot.getContainerSlot());
 
         if(!(entryStack instanceof CondensedItemEntry entry)) return;
 
@@ -67,49 +65,45 @@ public class SlotRenderUtils {
         }
 
         if(!entry.isChild) {
-            Identifier id = !CondensedItemEntry.CHILD_VISIBILITY.get(entry.condensedID) ? PLUS_ICON : MINUS_ICON;
+            ResourceLocation id = !CondensedItemEntry.CHILD_VISIBILITY.get(entry.condensedID) ? PLUS_ICON : MINUS_ICON;
 
-            context.drawTexture(id, minX, minY, 160, 0, 0, 16, 16, 16, 16);
+            context.blit(id, minX, minY, 160, 0, 0, 16, 16, 16, 16);
         }
     }
 
-    @Unique
-    public static boolean isSlotAbovePartOfCondensedEntry(Slot slot, Identifier condensedID){
-        int topSlotIndex = slot.getIndex() - 9;
+    private static boolean isSlotAbovePartOfCondensedEntry(Slot slot, ResourceLocation condensedID){
+        int topSlotIndex = slot.getContainerSlot() - 9;
 
         return topSlotIndex >= 0 &&
-                ((CondensedInventory) slot.inventory).getEntryStack(topSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+                ((CondensedInventory) slot.container).getEntryStack(topSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
-    @Unique
-    public static boolean isSlotBelowPartOfCondensedEntry(Slot slot, Identifier condensedID){
-        int bottomSlotIndex = slot.getIndex() + 9;
+    private static boolean isSlotBelowPartOfCondensedEntry(Slot slot, ResourceLocation condensedID){
+        int bottomSlotIndex = slot.getContainerSlot() + 9;
 
-        return bottomSlotIndex < slot.inventory.size() &&
-                ((CondensedInventory) slot.inventory).getEntryStack(bottomSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+        return bottomSlotIndex < slot.container.getContainerSize() &&
+                ((CondensedInventory) slot.container).getEntryStack(bottomSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
-    @Unique
-    public static boolean isSlotLeftPartOfCondensedEntry(Slot slot, Identifier condensedID){
-        if(((slot.id) % 9 == 0)) return false;
+    private static boolean isSlotLeftPartOfCondensedEntry(Slot slot, ResourceLocation condensedID){
+        if(((slot.index) % 9 == 0)) return false;
 
-        int leftSlotIndex = slot.getIndex() - 1;
+        int leftSlotIndex = slot.getContainerSlot() - 1;
 
-        return leftSlotIndex < slot.inventory.size() &&
-                ((CondensedInventory) slot.inventory).getEntryStack(leftSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+        return leftSlotIndex < slot.container.getContainerSize() &&
+                ((CondensedInventory) slot.container).getEntryStack(leftSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
-    @Unique
-    public static boolean isSlotRightPartOfCondensedEntry(Slot slot, Identifier condensedID){
-        if(((slot.id) % 9 == 8)) return false;
+    private static boolean isSlotRightPartOfCondensedEntry(Slot slot, ResourceLocation condensedID){
+        if(((slot.index) % 9 == 8)) return false;
 
-        int rightSlotIndex = slot.getIndex() + 1;
+        int rightSlotIndex = slot.getContainerSlot() + 1;
 
-        return rightSlotIndex < slot.inventory.size() &&
-                ((CondensedInventory) slot.inventory).getEntryStack(rightSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+        return rightSlotIndex < slot.container.getContainerSize() &&
+                ((CondensedInventory) slot.container).getEntryStack(rightSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 }
