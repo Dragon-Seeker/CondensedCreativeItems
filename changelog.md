@@ -1,1 +1,1 @@
-Condensed Creative 3.2.0 for Minecraft 1.20.4 contains the same changes for the previous version just for Minecraft 1.20.4
+Condensed Creative 3.2.1 has bug fixes for crashes on neoforge and various fixes for bugs involved with disappearing entries  in certain cases like resizing the window
