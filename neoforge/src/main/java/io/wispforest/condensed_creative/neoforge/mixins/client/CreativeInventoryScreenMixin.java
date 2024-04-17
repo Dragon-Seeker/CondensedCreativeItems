@@ -1,8 +1,7 @@
-package io.wispforest.condensed_creative.mixins.client;
+package io.wispforest.condensed_creative.neoforge.mixins.client;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenHandlerDuck;
@@ -10,28 +9,23 @@ import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.entry.impl.ItemEntry;
 import io.wispforest.condensed_creative.mixins.CreativeScreenHandlerAccessor;
+import io.wispforest.condensed_creative.mixins.client.HandledScreenAccessor;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.CondensedInventory;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.TagKey;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
@@ -39,8 +33,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.MathHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -50,11 +42,13 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 
 @Mixin(CreativeInventoryScreen.class)
-@Debug(export = true)
 public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScreen<CreativeInventoryScreen.CreativeScreenHandler> {
 
     @Shadow @Final @Mutable public static SimpleInventory INVENTORY;
@@ -127,24 +121,27 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
         this.validItemGroupForCondensedEntries = false;
     }
 
-    @WrapOperation(method = "setSelectedTab", at = {
-                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 0),
-                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 1)})
-    private boolean setSelectedTab$addStackToEntryList(DefaultedList list, Object object, Operation<Boolean> operation){
-        operation.call(list, object);
+    @Redirect(method = "setSelectedTab", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z"))
+    private boolean setSelectedTab$addStackToEntryList(DefaultedList instance, Object o) {
+        this.getHandlerDuck().addToDefaultEntryList((ItemStack) o);
 
-        return this.getHandlerDuck().addToDefaultEntryList((ItemStack) object);
+        return true;
     }
+//
+//    @Inject(method = "setSelectedTab", at = {
+//                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 0, shift = At.Shift.BY, by = 2),
+//                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 1, shift = At.Shift.BY, by = 2)})
+//    private void setSelectedTab$addStackToEntryList(ItemGroup group, CallbackInfo ci){
+//        this.getHandlerDuck().addToDefaultEntryList(this.handler.itemList.get(this.handler.itemList.size() - 1));
+//    }
 
-    @WrapOperation(method = "setSelectedTab", at = {
-                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;addAll(Ljava/util/Collection;)Z", ordinal = 0),
-                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;addAll(Ljava/util/Collection;)Z", ordinal = 1)})
-    private boolean setSelectedTab$addStacksToEntryList(DefaultedList list, Collection collection, Operation<Boolean> operation, @Local(argsOnly = true) ItemGroup group){
-        operation.call(list, collection);
+    @Inject(method = "setSelectedTab", at = {
+                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;addAll(Ljava/util/Collection;)Z",ordinal = 0, shift = At.Shift.BY, by = 2),
+                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;addAll(Ljava/util/Collection;)Z", ordinal = 1, shift = At.Shift.BY, by = 1)})
+    private void setSelectedTab$addStacksToEntryList(ItemGroup group, CallbackInfo ci){
+        this.handler.itemList.forEach(stack -> getHandlerDuck().addToDefaultEntryList(stack));
 
         if(group != Registries.ITEM_GROUP.get(ItemGroups.HOTBAR)) this.validItemGroupForCondensedEntries = true;
-
-        return getHandlerDuck().addToDefaultEntryList((Collection<ItemStack>) collection);
     }
 
     //-------------

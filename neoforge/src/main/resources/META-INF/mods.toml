@@ -15,7 +15,7 @@ logoFile = "icon.png"
 [[mixins]]
 config = 'condensedCreativeCommon.mixins.json'
 [[mixins]]
-config = 'condensedCreativeNeoForge.mixins.json'
+config = 'condensedCreativeNeoforge.mixins.json'
 
 [[dependencies.condensed_creative]]
 modId = "neoforge"

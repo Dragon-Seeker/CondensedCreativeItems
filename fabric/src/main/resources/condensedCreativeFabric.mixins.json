@@ -1,8 +1,9 @@
 {
   "required": true,
-  "package": "io.wispforest.condensed_creative.mixins.fabric",
+  "package": "io.wispforest.condensed_creative.fabric.mixins",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "client.HandledScreenMixin"
   ],
   "mixins": [
   ],
