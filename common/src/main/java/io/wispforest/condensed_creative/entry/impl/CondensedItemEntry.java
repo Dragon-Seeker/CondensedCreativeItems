@@ -6,6 +6,7 @@ import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -283,7 +284,7 @@ public class CondensedItemEntry extends ItemEntry {
     //------------------------------------------------------------------------------------------------------------------------------------------
 
     @ApiStatus.Internal
-    public void initializeChildren(List<Entry> itemGroupList){
+    public void initializeChildren(RegistryAccess access, List<Entry> itemGroupList){
         if(this.childrenEntry.isEmpty()) {
             List<ItemStack> childrenStacks = this.getChildren();
 
@@ -374,7 +375,7 @@ public class CondensedItemEntry extends ItemEntry {
                     ? new Random().nextInt(0, childrenEntry.size())
                     : 0;
 
-            if(index < 0 || index > childrenEntry.size()){
+            if(index < 0 || index >= childrenEntry.size()){
                 currentlyDisplayedEntry = ItemEntry.EMPTY;
 
                 LOGGER.error("[CondensedItemEntry]: It seems that a random number generated for the given CondensedEntry[{}] seems to have been out of the valid bounds!", this.condensedID);

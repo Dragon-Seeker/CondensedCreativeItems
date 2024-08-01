@@ -1,6 +1,7 @@
 package io.wispforest.condensed_creative.registry;
 
 import io.wispforest.condensed_creative.CondensedCreative;
+import net.minecraft.core.RegistryAccess;
 
 /**
  *  Entry point Interface where you can create and register condensed Entries.
@@ -20,17 +21,17 @@ import io.wispforest.condensed_creative.CondensedCreative;
 public interface CondensedCreativeInitializer {
 
     /**
-     * Deprecated: Override {@link CondensedCreativeInitializer#registerCondensedEntries} instead!
+     * @deprecated Use {@link #registerCondensedEntries(boolean, RegistryAccess)} instead
      */
     @Deprecated
-    default void onInitializeCondensedEntries(boolean refreshed){}
+    default void registerCondensedEntries(boolean refreshed){}
 
     /**
      * This happens during the Clientside Loading for {@link CondensedCreative#onInitializeClient} and
      * recommend implementing this in a separate class not touched by any of your code to prevent class loading problems
      */
-    default void registerCondensedEntries(boolean refreshed){
-        onInitializeCondensedEntries(refreshed);
+    default void registerCondensedEntries(boolean refreshed, RegistryAccess access){
+        registerCondensedEntries(refreshed);
     }
 
     /**

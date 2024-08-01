@@ -48,8 +48,8 @@ public class CondensedCreative {
         return DEBUG_ENV || DEBUG;
     }
 
-    public static ResourceLocation createID(String path){
-        return new ResourceLocation(MODID, path);
+    public static ResourceLocation location(String path){
+        return ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 
     //---------------------------------------------------------------------------------------------------------

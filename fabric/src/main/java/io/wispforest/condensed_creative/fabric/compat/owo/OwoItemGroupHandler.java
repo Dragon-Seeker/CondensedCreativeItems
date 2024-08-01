@@ -10,7 +10,7 @@ import net.minecraft.world.item.CreativeModeTab;
 public class OwoItemGroupHandler extends ItemGroupVariantHandler<OwoItemGroup> {
 
     public OwoItemGroupHandler() {
-        super(OwoItemGroup.class, CondensedCreative.createID("owo_item_group_handler"));
+        super(OwoItemGroup.class, CondensedCreative.location("owo_item_group_handler"));
     }
 
     @Override

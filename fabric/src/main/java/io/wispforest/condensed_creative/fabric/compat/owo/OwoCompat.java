@@ -23,7 +23,7 @@ public class OwoCompat {
 
         if (CondensedCreative.isDeveloperMode()) {
             CondensedCreativeFabric.createOwoItemGroup = () -> {
-                OwoItemGroup owoItemGroup = OwoItemGroup.builder(CondensedCreative.createID("test"), () -> Icon.of(Blocks.BEDROCK.asItem().getDefaultInstance()))
+                OwoItemGroup owoItemGroup = OwoItemGroup.builder(CondensedCreative.location("test"), () -> Icon.of(Blocks.BEDROCK.asItem().getDefaultInstance()))
                         .initializer(group -> {
                             Function<ResourceKey<CreativeModeTab>, CreativeModeTab> func = BuiltInRegistries.CREATIVE_MODE_TAB::get;
 

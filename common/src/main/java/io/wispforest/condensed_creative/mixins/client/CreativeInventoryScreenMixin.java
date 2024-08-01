@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
+import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenDuck;
 import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenHandlerDuck;
 import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
@@ -12,6 +13,7 @@ import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.CondensedInventory;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetSprites;
@@ -32,10 +34,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -46,9 +45,9 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 @Mixin(CreativeModeInventoryScreen.class)
-public abstract class CreativeInventoryScreenMixin extends EffectRenderingInventoryScreen<CreativeModeInventoryScreen.ItemPickerMenu> {
+public abstract class CreativeInventoryScreenMixin extends EffectRenderingInventoryScreen<CreativeModeInventoryScreen.ItemPickerMenu> implements CreativeInventoryScreenDuck {
 
-    @Shadow @Final @Mutable public static SimpleContainer CONTAINER;
+    @Shadow @Final @Mutable static SimpleContainer CONTAINER;
 
     @Shadow private static CreativeModeTab selectedTab;
 
@@ -58,8 +57,8 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
 
     //-------------
 
-    @Unique private static final ResourceLocation refreshButtonIconUnfocused = CondensedCreative.createID("refresh_button_unfocused");
-    @Unique private static final ResourceLocation refreshButtonIconFocused = CondensedCreative.createID("refresh_button_focused");
+    @Unique private static final ResourceLocation refreshButtonIconUnfocused = CondensedCreative.location("refresh_button_unfocused");
+    @Unique private static final ResourceLocation refreshButtonIconFocused = CondensedCreative.location("refresh_button_focused");
 
     @Unique private boolean validItemGroupForCondensedEntries = false;
 
@@ -67,6 +66,11 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
 
     public CreativeInventoryScreenMixin(CreativeModeInventoryScreen.ItemPickerMenu screenHandler, Inventory playerInventory, Component text) {
         super(screenHandler, playerInventory, text);
+    }
+
+    @Override
+    public void cc$refreshCurrentTab() {
+        selectTab(selectedTab);
     }
 
     @Inject(method = "<clinit>", at = @At("TAIL"))
@@ -81,7 +85,6 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
         var widget = new ImageButton(this.leftPos + 200, this.topPos + 140, 16, 16, new WidgetSprites(refreshButtonIconUnfocused, refreshButtonIconFocused),
                 button -> {
                     CondensedEntryRegistry.refreshEntrypoints();
-                    selectTab(this.selectedTab);
                 },
                 CommonComponents.EMPTY
         );
@@ -118,8 +121,15 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
         this.validItemGroupForCondensedEntries = false;
     }
 
-    @Redirect(method = "selectTab", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z"))
-    private boolean setSelectedTab$addStackToEntryList(NonNullList instance, Object o) {
+    @Redirect(
+            method = "selectTab",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z"),
+            slice = @Slice(
+                    from = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z", ordinal = 0),
+                    to = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z", ordinal = 1)
+            )
+    )
+    private boolean setSelectedTab$addStackToEntryList(NonNullList<ItemStack> instance, Object o) {
         this.getHandlerDuck().addToDefaultEntryList((ItemStack) o);
 
         return true;
@@ -183,7 +193,7 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
         for (var condensedItemEntry : parentEntries) {
             int i = defaultList.indexOf(Entry.of(condensedItemEntry.getEntryStack()));
 
-            condensedItemEntry.initializeChildren(defaultList);
+            condensedItemEntry.initializeChildren(Minecraft.getInstance().level.registryAccess(), defaultList);
 
             if(condensedItemEntry.childrenEntry.isEmpty()) continue;
 

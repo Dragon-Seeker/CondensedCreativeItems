@@ -1,6 +1,6 @@
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "dev.architectury.loom" version "1.6-SNAPSHOT" apply false
+    id "dev.architectury.loom" version "1.7-SNAPSHOT" apply false
 }
 
 architectury {
@@ -9,6 +9,7 @@ architectury {
 
 subprojects {
     apply plugin: "dev.architectury.loom"
+    apply plugin: "maven-publish"
 
     loom {
         silentMojangMappingsLicense()
@@ -16,6 +17,7 @@ subprojects {
 
     repositories {
         maven { url "https://maven.parchmentmc.org" }
+        maven { url "https://maven.wispforest.io/releases" }
     }
 
     dependencies {
@@ -23,7 +25,29 @@ subprojects {
 
         mappings loom.layered() {
             officialMojangMappings()
-            parchment("org.parchmentmc.data:parchment-1.20.4:2024.04.14@zip")
+            parchment("org.parchmentmc.data:parchment-${rootProject.minecraft_version}:${rootProject.parchment_version}@zip")
+        }
+    }
+
+    def ENV = System.getenv()
+
+    publishing {
+        publications {
+            mavenForge(MavenPublication) {
+                artifactId = rootProject.archives_base_name + "-" + project.name
+                from components.java
+            }
+        }
+
+        repositories {
+            maven {
+                url ENV.MAVEN_URL
+
+                credentials {
+                    username ENV.MAVEN_USER
+                    password ENV.MAVEN_PASSWORD
+                }
+            }
         }
     }
 }
@@ -33,7 +57,6 @@ def ENV = System.getenv()
 allprojects {
     apply plugin: "java"
     apply plugin: "architectury-plugin"
-    apply plugin: "maven-publish"
 
     archivesBaseName = rootProject.archives_base_name
     version = rootProject.mod_version
@@ -42,24 +65,13 @@ allprojects {
     repositories {
         maven { url 'https://maven.wispforest.io' }
         maven { url "https://maven.shedaniel.me/" }
-        maven {
-            name = "Modrinth"
-            url = "https://api.modrinth.com/maven"
-            content {
-                includeGroup "maven.modrinth"
-            }
-        }
-        maven {
-            url "https://maven.terraformersmc.com/releases/"
-            content {
-                includeGroup "com.terraformersmc"
-            }
-        }
+        maven { url "https://api.modrinth.com/maven" }
+        maven { url "https://maven.terraformersmc.com/releases/" }
     }
 
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
-        options.release = 17
+        options.release = 21
     }
 
     java {

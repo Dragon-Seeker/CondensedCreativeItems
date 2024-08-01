@@ -3,6 +3,8 @@ package io.wispforest.condensed_creative.util;
 import io.wispforest.condensed_creative.entry.Entry;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.ContainerHelper;
@@ -78,7 +80,7 @@ public class CondensedInventory extends SimpleContainer {
         boolean bl = false;
 
         for(ItemStack itemStack : getItemStackList()) {
-            if (itemStack.isEmpty() || ItemStack.isSameItemSameTags(itemStack, stack) && itemStack.getCount() < itemStack.getMaxStackSize()) {
+            if (itemStack.isEmpty() || ItemStack.isSameItemSameComponents(itemStack, stack) && itemStack.getCount() < itemStack.getMaxStackSize()) {
                 bl = true;
                 break;
             }
@@ -160,9 +162,10 @@ public class CondensedInventory extends SimpleContainer {
     }
 
     //TODO: WHY IS THIS HERE?
-    public void fromTag(ListTag nbtList) {
+    @Override
+    public void fromTag(ListTag nbtList, HolderLookup.Provider levelRegistry) {
         for(int i = 0; i < nbtList.size(); ++i) {
-            ItemStack itemStack = ItemStack.of(nbtList.getCompound(i));
+            ItemStack itemStack = ItemStack.parseOptional(levelRegistry, nbtList.getCompound(i));
             if (!itemStack.isEmpty()) {
                 this.addItem(itemStack);
             }

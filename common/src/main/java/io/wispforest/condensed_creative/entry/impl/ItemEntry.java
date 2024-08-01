@@ -49,7 +49,7 @@ public class ItemEntry implements Entry {
     }
 
     public static int hashcodeOfStack(ItemStack stack){
-        return ItemStackSetAccessor.cc$getHashCode(stack);
+        return ItemStackSetAccessor.cc$getHashStrategy().hashCode(stack);
     }
 
     @Override

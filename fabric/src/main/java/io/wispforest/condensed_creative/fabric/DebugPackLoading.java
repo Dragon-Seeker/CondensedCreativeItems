@@ -28,7 +28,7 @@ public class DebugPackLoading {
             container.addAdditionalRootPath(mainDevFolder.resolve("common\\build\\resources\\main"));
 
             boolean success = ResourceManagerHelper.registerBuiltinResourcePack(
-                    CondensedCreative.createID("dev_pack"),
+                    CondensedCreative.location("dev_pack"),
                     container,
                     ResourcePackActivationType.NORMAL
             );

@@ -32,7 +32,7 @@
   "depends": {
     "fabricloader": ">=0.14.12",
     "fabric": "*",
-    "minecraft": "~1.20",
-    "cloth-config": ">=11.0.99"
+    "minecraft": "~1.21",
+    "cloth-config": ">=15.0.128"
   }
 }

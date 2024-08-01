@@ -2,15 +2,23 @@ package io.wispforest.condensed_creative.data;
 
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.JsonOps;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -105,7 +113,7 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
         List<CondensedItemEntry> entries = new ArrayList<>();
 
         for(Map.Entry<String, JsonElement> itemGroupEntries : jsonMap.entrySet()){
-            ResourceLocation itemGroupId = new ResourceLocation(itemGroupEntries.getKey());
+            ResourceLocation itemGroupId = ResourceLocation.parse(itemGroupEntries.getKey());
 
             Optional<CreativeModeTab> possibleItemGroup = itemGroups.stream()
                     .filter(group -> Objects.equals(BuiltInRegistries.CREATIVE_MODE_TAB.getKey(group), itemGroupId)).findFirst();
@@ -170,12 +178,6 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
     }
 
     private static Optional<CondensedItemEntry.Builder> deserializeEntry(ResourceLocation fileID, String key, JsonElement jsonData){
-        if(!(jsonData instanceof JsonObject jsonObject)) {
-            LOGGER.error("[CondensedEntryLoader]: A given Entry was attempted to be read but was malformed: [FileID: {}, EntryID: {}]", fileID, key);
-
-            return Optional.empty();
-        }
-
         ResourceLocation entryId = ResourceLocation.tryParse(key);
 
         if(entryId == null){
@@ -184,18 +186,23 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
             return Optional.empty();
         }
 
+        if(!(jsonData instanceof JsonObject jsonObject)) {
+            LOGGER.error("[CondensedEntryLoader]: A given Entry was attempted to be read but was malformed: [FileID: {}, EntryID: {}]", fileID, entryId);
+
+            return Optional.empty();
+        }
 
         CondensedItemEntry.Builder builder;
 
         if(checkLocalEntries && LOCAL_ENTRIES.containsKey(entryId)) {
             builder = LOCAL_ENTRIES.get(entryId).copy();
         } else {
-            Item item;
+            Item baseItem;
 
             try {
-                item = GsonHelper.getAsItem(jsonObject, "base_item").value();
+                baseItem = GsonHelper.getAsItem(jsonObject, "base_item").value();
             } catch (JsonSyntaxException e){
-                LOGGER.warn("[CondensedEntryLoader]: The Base Item for a given entry was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: The Base Item for a given entry was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, entryId);
                 LOGGER.warn(e.getMessage());
 
                 return Optional.empty();
@@ -204,21 +211,30 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
             if (jsonObject.has("item_tag")) {
                 TagKey<Item> itemTagKey = TagKey.create(Registries.ITEM, ResourceLocation.tryParse(GsonHelper.getAsString(jsonObject, "item_tag")));
 
-                builder = CondensedEntryRegistry.fromTag(entryId, item, itemTagKey);
+                builder = CondensedEntryRegistry.fromTag(entryId, baseItem, itemTagKey);
 
             } else if (jsonObject.has("block_tag")) {
                 TagKey<Block> itemTagKey = TagKey.create(Registries.BLOCK, ResourceLocation.tryParse(GsonHelper.getAsString(jsonObject, "block_tag")));
 
-                builder = CondensedEntryRegistry.fromTag(entryId, item, itemTagKey);
-
+                builder = CondensedEntryRegistry.fromTag(entryId, baseItem, itemTagKey);
             } else if (jsonObject.has("items")) {
-                List<Item> items = new ArrayList<>();
+                List<Supplier<ItemStack>> items = new ArrayList<>();
 
-                GsonHelper.getAsJsonArray(jsonObject, "items").forEach(jsonElement -> items.add(GsonHelper.convertToItem(jsonElement, jsonElement.getAsString()).value()));
+                for (var jsonElement : GsonHelper.getAsJsonArray(jsonObject, "items")) {
+                    if(jsonElement instanceof JsonObject stackObject){
+                        var objectCopy = stackObject.deepCopy();
 
-                builder = CondensedEntryRegistry.fromItems(entryId, item, items);
+                        items.add(() -> parseStack(Minecraft.getInstance().level.registryAccess(), objectCopy, fileID, entryId));
+                    } else {
+                        var item = GsonHelper.convertToItem(jsonElement, jsonElement.getAsString()).value();
+
+                        items.add(item::getDefaultInstance);
+                    }
+                }
+
+                builder = CondensedEntryRegistry.ofSupplier(entryId, baseItem, () -> items.stream().map(Supplier::get).toList());
             } else {
-                LOGGER.error("[CondensedEntryLoader]: A Entry seems to be missing the needed info to create it self within its JSON: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.error("[CondensedEntryLoader]: A Entry seems to be missing the needed info to create it self within its JSON: [FileID: {}, EntryID: {}]", fileID, entryId);
 
                 return Optional.empty();
             }
@@ -230,7 +246,7 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
             if(element instanceof JsonPrimitive primitive && primitive.isBoolean()){
                 builder.toggleStrictFiltering(primitive.getAsBoolean());
             } else {
-                LOGGER.warn("[CondensedEntryLoader]: Strict Filter Mode wasn't found to be a boolean: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: Strict Filter Mode wasn't found to be a boolean: [FileID: {}, EntryID: {}]", fileID, entryId);
             }
         }
 
@@ -243,12 +259,12 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
                         builder.setTitleFromTag();
                     }
                 } else {
-                    Component text = Component.Serializer.fromJson(element);
+                    Component text = ComponentSerialization.CODEC.decode(JsonOps.INSTANCE, element).getOrThrow(JsonParseException::new).getFirst();
 
                     builder.setTitle(text);
                 }
             } catch (JsonParseException e){
-                LOGGER.warn("[CondensedEntryLoader]: The Title for a given Entry threw a error during reading: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: The Title for a given Entry threw a error during reading: [FileID: {}, EntryID: {}]", fileID, entryId);
                 LOGGER.warn(e.getMessage());
             }
         }
@@ -257,11 +273,11 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
             JsonElement element = jsonObject.get("description");
 
             try {
-                Component text = Component.Serializer.fromJson(element);
+                Component text = ComponentSerialization.CODEC.decode(JsonOps.INSTANCE, element).getOrThrow(JsonParseException::new).getFirst();
 
                 builder.setDescription(text);
             } catch (JsonParseException e){
-                LOGGER.warn("[CondensedEntryLoader]: The Description for a given Entry threw a error during reading: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: The Description for a given Entry threw a error during reading: [FileID: {}, EntryID: {}]", fileID, entryId);
                 LOGGER.warn(e.getMessage());
             }
         }
@@ -277,10 +293,10 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
                 } else if(Objects.equals(string, "DEFAULT")){
                     builder.setEntryOrder(CondensedItemEntry.EntryOrder.DEFAULT_ORDER);
                 } else {
-                    LOGGER.warn("[CondensedEntryLoader]: A given Entry Order seems to not exist with the list of Orderings: [FileID: {}, EntryID: {}]", fileID, key);
+                    LOGGER.warn("[CondensedEntryLoader]: A given Entry Order seems to not exist with the list of Orderings: [FileID: {}, EntryID: {}]", fileID, entryId);
                 }
             } else {
-                LOGGER.warn("[CondensedEntryLoader]: A given Entry Order was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: A given Entry Order was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, entryId);
             }
         }
 
@@ -292,11 +308,21 @@ public class CondensedEntriesLoader extends SimpleJsonResourceReloadListener {
 
                 builder.useItemComparison(value);
             } else {
-                LOGGER.warn("[CondensedEntryLoader]: A Item Comparison was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, key);
+                LOGGER.warn("[CondensedEntryLoader]: A Item Comparison was found to be malformed in some way: [FileID: {}, EntryID: {}]", fileID, entryId);
             }
         }
 
         return Optional.of(builder);
+    }
+
+    public static ItemStack parseStack(HolderLookup.Provider lookupProvider, JsonElement jsonElement, ResourceLocation fileID, ResourceLocation entryId) {
+        try {
+            return ItemStack.CODEC.parse(lookupProvider.createSerializationContext(JsonOps.INSTANCE), jsonElement).getOrThrow();
+        } catch (Exception e) {
+            LOGGER.warn("[CondensedEntryLoader]: Tried to parse a given invalid ItemStack but encountered an error: [FileID: {}, EntryID: {}]", fileID, entryId, e);
+        }
+
+        return ItemStack.EMPTY;
     }
 
 }

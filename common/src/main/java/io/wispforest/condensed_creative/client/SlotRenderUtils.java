@@ -14,8 +14,8 @@ import net.minecraft.world.inventory.Slot;
 
 public class SlotRenderUtils {
 
-    private static final ResourceLocation PLUS_ICON = CondensedCreative.createID("textures/gui/plus_logo.png");
-    private static final ResourceLocation MINUS_ICON = CondensedCreative.createID("textures/gui/minus_logo.png");
+    private static final ResourceLocation PLUS_ICON = CondensedCreative.location("textures/gui/plus_logo.png");
+    private static final ResourceLocation MINUS_ICON = CondensedCreative.location("textures/gui/minus_logo.png");
 
     public static void renderExtraIfEntry(AbstractContainerScreen screen, GuiGraphics context, Slot slot){
         if(!(screen instanceof CreativeModeInventoryScreen && slot.container instanceof CondensedInventory inv)) return;

@@ -2,12 +2,20 @@ package io.wispforest.condensed_creative.registry;
 
 import com.mojang.logging.LogUtils;
 import io.wispforest.condensed_creative.LoaderSpecificUtils;
+import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenDuck;
+import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenHandlerDuck;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
+import io.wispforest.condensed_creative.mixins.client.CreativeInventoryScreenMixin;
 import io.wispforest.condensed_creative.util.ItemGroupHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.ApiStatus;
 import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -245,8 +253,23 @@ public final class CondensedEntryRegistry {
         }
     }
 
-    @ApiStatus.Internal
+    public static void refreshChildren() {
+        ENTRYPOINT_LOADED_ENTRIES.values().forEach((groupedEntries) -> groupedEntries.forEach(entry -> entry.childrenEntry.clear()));
+        RESOURCE_LOADED_ENTRIES.values().forEach((groupedEntries) -> groupedEntries.forEach(entry -> entry.childrenEntry.clear()));
+
+        if(Minecraft.getInstance().screen instanceof CreativeInventoryScreenDuck duck) duck.cc$refreshCurrentTab();
+    }
+
     public static boolean refreshEntrypoints(){
+        var currentLevel = Minecraft.getInstance().level;
+
+        if(currentLevel == null) return false;
+
+        return refreshEntrypoints(currentLevel);
+    }
+
+    @ApiStatus.Internal
+    public static boolean refreshEntrypoints(Level level){
         int previousSize = 0;
         int currentSize = 0;
 
@@ -257,13 +280,17 @@ public final class CondensedEntryRegistry {
         ENTRYPOINT_LOADED_ENTRIES.clear();
 
         for(CondensedCreativeInitializer initializer : LoaderSpecificUtils.getEntryPoints()){
-            initializer.registerCondensedEntries(true);
+            initializer.registerCondensedEntries(true, level.registryAccess());
         }
 
         for(Map.Entry<ItemGroupHelper, List<CondensedItemEntry>> entry : CondensedEntryRegistry.ENTRYPOINT_LOADED_ENTRIES.entrySet()){
             currentSize += entry.getValue().size();
         }
 
-        return previousSize != currentSize;
+        var result = previousSize != currentSize;
+
+        if(result && Minecraft.getInstance().screen instanceof CreativeInventoryScreenDuck duck) duck.cc$refreshCurrentTab();
+
+        return result;
     }
 }
