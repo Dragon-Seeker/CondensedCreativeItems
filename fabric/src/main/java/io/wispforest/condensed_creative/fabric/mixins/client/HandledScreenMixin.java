@@ -20,6 +20,7 @@ public abstract class HandledScreenMixin<T extends AbstractContainerMenu> {
 
     @WrapOperation(method = "renderSlot", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;renderItemDecorations(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;IILjava/lang/String;)V"))
     private void renderExtraIfEntry(GuiGraphics instance, Font font, ItemStack stack, int x, int y, String text, Operation<Void> original, @Local(argsOnly = true) Slot slot){
+        original.call(instance, font, stack, x, y, text);
         SlotRenderUtils.renderExtraIfEntry((AbstractContainerScreen) (Object) this, instance, slot);
     }
 }
