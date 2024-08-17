@@ -9,6 +9,8 @@ public interface CreativeInventoryScreenHandlerDuck {
 
     void markEntryListDirty();
 
+    NonNullList<Entry> getFilteredEntryList();
+
     NonNullList<Entry> getDefaultEntryList();
 
     default boolean addToDefaultEntryList(ItemStack stack) {

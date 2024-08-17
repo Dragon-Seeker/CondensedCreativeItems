@@ -121,7 +121,7 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
         this.validItemGroupForCondensedEntries = false;
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "selectTab",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z"),
             slice = @Slice(
@@ -129,18 +129,13 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
                     to = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;add(Ljava/lang/Object;)Z", ordinal = 1)
             )
     )
-    private boolean setSelectedTab$addStackToEntryList(NonNullList<ItemStack> instance, Object o) {
+    private boolean setSelectedTab$addStackToEntryList(NonNullList<ItemStack> instance, Object o, Operation<Boolean> original) {
         this.getHandlerDuck().addToDefaultEntryList((ItemStack) o);
+
+        original.call(instance, o);
 
         return true;
     }
-//
-//    @Inject(method = "setSelectedTab", at = {
-//                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 0, shift = At.Shift.BY, by = 2),
-//                @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/DefaultedList;add(Ljava/lang/Object;)Z", ordinal = 1, shift = At.Shift.BY, by = 2)})
-//    private void setSelectedTab$addStackToEntryList(ItemGroup group, CallbackInfo ci){
-//        this.getHandlerDuck().addToDefaultEntryList(this.handler.itemList.get(this.handler.itemList.size() - 1));
-//    }
 
     @Inject(method = "selectTab", at = {
                 @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;addAll(Ljava/util/Collection;)Z",ordinal = 0, shift = At.Shift.BY, by = 2),
@@ -286,8 +281,8 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
             original.call(instance, position);
         }
 
-        @Redirect(method = "canScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;size()I"))
-        private int redirectListSize(NonNullList instance){
+        @WrapOperation(method = "canScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/NonNullList;size()I"))
+        private int redirectListSize(NonNullList instance, Operation<Integer> original){
             return this.filteredEntryList.size();
         }
 
@@ -297,18 +292,11 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
          */
         @Overwrite
         public void scrollTo(float position){
-            if(this.isEntryListDirty){
-                Predicate<Entry> removeNonVisibleEntries = Entry::isVisible;
-
-                this.filteredEntryList.clear();
-                this.filteredEntryList.addAll(this.getDefaultEntryList().stream().filter(removeNonVisibleEntries).toList());
-
-                this.isEntryListDirty = false;
-            }
-
-            int positionOffset = this.getRowIndexForScroll(position);
+            checkAndUpdateIfListDirt();
 
             //---------------------------------------------
+
+            int positionOffset = this.getRowIndexForScroll(position);
 
             for(int k = 0; k < 5; ++k) {
                 for(int l = 0; l < 9; ++l) {
@@ -317,10 +305,22 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
                     if (m >= 0 && m < this.filteredEntryList.size()) {
                         ((CondensedInventory) CreativeModeInventoryScreenAccessor.CONTAINER()).setEntryStack(l + k * 9, this.filteredEntryList.get(m));
                     } else {
-                        ((CondensedInventory) CreativeModeInventoryScreenAccessor.CONTAINER()).setItem(l + k * 9, ItemStack.EMPTY);
+                        CreativeModeInventoryScreenAccessor.CONTAINER().setItem(l + k * 9, ItemStack.EMPTY);
                     }
                 }
             }
+        }
+
+        @Unique
+        private void checkAndUpdateIfListDirt() {
+            if(!this.isEntryListDirty) return;
+
+            Predicate<Entry> removeNonVisibleEntries = Entry::isVisible;
+
+            this.filteredEntryList.clear();
+            this.filteredEntryList.addAll(this.getDefaultEntryList().stream().filter(removeNonVisibleEntries).toList());
+
+            this.isEntryListDirty = false;
         }
 
         /**
@@ -333,6 +333,12 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
         }
 
         //----------
+
+
+        @Override
+        public NonNullList<Entry> getFilteredEntryList() {
+            return this.filteredEntryList;
+        }
 
         @Override
         public NonNullList<Entry> getDefaultEntryList() {

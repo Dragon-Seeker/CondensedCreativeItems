@@ -4,6 +4,7 @@ import io.wispforest.condensed_creative.entry.Entry;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.wispforest.condensed_creative.entry.EntryContainer;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.ListTag;
@@ -14,7 +15,7 @@ import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-public class CondensedInventory extends SimpleContainer {
+public class CondensedInventory extends SimpleContainer implements EntryContainer {
 
     private final NonNullList<Entry> entryStacks;
 
@@ -24,13 +25,30 @@ public class CondensedInventory extends SimpleContainer {
         this.entryStacks = NonNullList.withSize(size, Entry.EMPTY_ENTRY);
     }
 
+    //--
+
+    @Override
+    public Entry getEntryStack(int slot) {
+        return slot >= 0 && slot < this.entryStacks.size() ? this.entryStacks.get(slot) : Entry.EMPTY_ENTRY;
+    }
+
+    @Override
+    public void setEntryStack(int slot, Entry entryStack) {
+        this.entryStacks.set(slot, entryStack);
+
+        ItemStack stack = entryStack.getEntryStack();
+        if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
+        }
+
+        this.setChanged();
+    }
+
+    //--
+
     @Override
     public ItemStack getItem(int slot) {
         return slot >= 0 && slot < this.entryStacks.size() ? this.entryStacks.get(slot).getEntryStack() : ItemStack.EMPTY;
-    }
-
-    public Entry getEntryStack(int slot) {
-        return slot >= 0 && slot < this.entryStacks.size() ? this.entryStacks.get(slot) : Entry.EMPTY_ENTRY;
     }
 
     /**
@@ -103,17 +121,6 @@ public class CondensedInventory extends SimpleContainer {
     @Override
     public void setItem(int slot, ItemStack stack) {
         this.entryStacks.set(slot, Entry.of(stack));
-        if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
-            stack.setCount(this.getMaxStackSize());
-        }
-
-        this.setChanged();
-    }
-
-    public void setEntryStack(int slot, Entry entryStack) {
-        this.entryStacks.set(slot, entryStack);
-
-        ItemStack stack = entryStack.getEntryStack();
         if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
             stack.setCount(this.getMaxStackSize());
         }

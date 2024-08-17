@@ -3,6 +3,7 @@ package io.wispforest.condensed_creative.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.entry.Entry;
+import io.wispforest.condensed_creative.entry.EntryContainer;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.util.CondensedInventory;
 import me.shedaniel.math.Color;
@@ -18,7 +19,7 @@ public class SlotRenderUtils {
     private static final ResourceLocation MINUS_ICON = CondensedCreative.location("textures/gui/minus_logo.png");
 
     public static void renderExtraIfEntry(AbstractContainerScreen screen, GuiGraphics context, Slot slot){
-        if(!(screen instanceof CreativeModeInventoryScreen && slot.container instanceof CondensedInventory inv)) return;
+        if(!(screen instanceof CreativeModeInventoryScreen && slot.container instanceof EntryContainer inv)) return;
 
         Entry entryStack = inv.getEntryStack(slot.getContainerSlot());
 
@@ -60,8 +61,6 @@ public class SlotRenderUtils {
                     context.fill(minX - 1, minY - 1, maxX - 16, maxY + 1, outlineColor.getColor());
                 }
             }
-
-            RenderSystem.disableBlend();
         }
 
         if(!entry.isChild) {
