@@ -5,7 +5,6 @@ import io.wispforest.condensed_creative.CondensedCreative;
 import io.wispforest.condensed_creative.entry.Entry;
 import io.wispforest.condensed_creative.entry.EntryContainer;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
-import io.wispforest.condensed_creative.util.CondensedInventory;
 import me.shedaniel.math.Color;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -74,7 +73,7 @@ public class SlotRenderUtils {
         int topSlotIndex = slot.getContainerSlot() - 9;
 
         return topSlotIndex >= 0 &&
-                ((CondensedInventory) slot.container).getEntryStack(topSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+                ((EntryContainer) slot.container).getEntryStack(topSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
@@ -82,7 +81,7 @@ public class SlotRenderUtils {
         int bottomSlotIndex = slot.getContainerSlot() + 9;
 
         return bottomSlotIndex < slot.container.getContainerSize() &&
-                ((CondensedInventory) slot.container).getEntryStack(bottomSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+                ((EntryContainer) slot.container).getEntryStack(bottomSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
@@ -92,7 +91,7 @@ public class SlotRenderUtils {
         int leftSlotIndex = slot.getContainerSlot() - 1;
 
         return leftSlotIndex < slot.container.getContainerSize() &&
-                ((CondensedInventory) slot.container).getEntryStack(leftSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+                ((EntryContainer) slot.container).getEntryStack(leftSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 
@@ -102,7 +101,7 @@ public class SlotRenderUtils {
         int rightSlotIndex = slot.getContainerSlot() + 1;
 
         return rightSlotIndex < slot.container.getContainerSize() &&
-                ((CondensedInventory) slot.container).getEntryStack(rightSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
+                ((EntryContainer) slot.container).getEntryStack(rightSlotIndex) instanceof CondensedItemEntry condensedItemEntry &&
                 condensedID == condensedItemEntry.condensedID;
     }
 }

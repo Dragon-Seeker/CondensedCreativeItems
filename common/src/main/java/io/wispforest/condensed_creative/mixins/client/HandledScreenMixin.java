@@ -2,7 +2,6 @@ package io.wispforest.condensed_creative.mixins.client;
 
 import io.wispforest.condensed_creative.entry.EntryContainer;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
-import io.wispforest.condensed_creative.util.CondensedInventory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;

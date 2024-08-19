@@ -7,6 +7,7 @@ import io.wispforest.condensed_creative.compat.ItemGroupVariantHandler;
 import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenDuck;
 import io.wispforest.condensed_creative.ducks.CreativeInventoryScreenHandlerDuck;
 import io.wispforest.condensed_creative.entry.Entry;
+import io.wispforest.condensed_creative.entry.EntryContainer;
 import io.wispforest.condensed_creative.entry.impl.CondensedItemEntry;
 import io.wispforest.condensed_creative.entry.impl.ItemEntry;
 import io.wispforest.condensed_creative.registry.CondensedEntryRegistry;
@@ -100,7 +101,7 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
     private void testToReplaceTooltipText(ItemStack stack, CallbackInfoReturnable<List<Component>> cir){
         var slot = ((HandledScreenAccessor)this).cc$getHoveredSlot();
 
-        if(slot != null && slot.container instanceof CondensedInventory inv
+        if(slot != null && slot.container instanceof EntryContainer inv
                 && ItemEntry.areStacksEqual(slot.getItem(), stack)
                 && inv.getEntryStack(slot.index) instanceof CondensedItemEntry entry && !entry.isChild) {
 
@@ -219,7 +220,7 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
 
     @Inject(method = "slotClicked", at = @At("HEAD"), cancellable = true)
     private void checkIfCondensedEntryWithinSlot(Slot slot, int slotId, int button, ClickType actionType, CallbackInfo ci){
-        if(slot != null && slot.container instanceof CondensedInventory inv && inv.getEntryStack(slotId) instanceof CondensedItemEntry entry && !entry.isChild) {
+        if(slot != null && slot.container instanceof EntryContainer inv && inv.getEntryStack(slotId) instanceof CondensedItemEntry entry && !entry.isChild) {
             entry.toggleVisibility();
 
             this.getHandlerDuck().markEntryListDirty();
@@ -303,7 +304,7 @@ public abstract class CreativeInventoryScreenMixin extends EffectRenderingInvent
                     int m = l + ((k + positionOffset) * 9);
 
                     if (m >= 0 && m < this.filteredEntryList.size()) {
-                        ((CondensedInventory) CreativeModeInventoryScreenAccessor.CONTAINER()).setEntryStack(l + k * 9, this.filteredEntryList.get(m));
+                        ((EntryContainer) CreativeModeInventoryScreenAccessor.CONTAINER()).setEntryStack(l + k * 9, this.filteredEntryList.get(m));
                     } else {
                         CreativeModeInventoryScreenAccessor.CONTAINER().setItem(l + k * 9, ItemStack.EMPTY);
                     }
