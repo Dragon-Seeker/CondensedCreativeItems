@@ -1,0 +1,52 @@
+{
+    "text.autoconfig.condensed_creative.title": "Configuração do CC",
+
+    "text.autoconfig.condensed_creative.category.common": "Comum",
+    "text.autoconfig.condensed_creative.category.debug_info": "Informações de depuração",
+    "text.autoconfig.condensed_creative.category.client": "Cliente",
+
+
+    "text.autoconfig.condensed_creative.option.defaultCCGroups": "Ativar Entradas Internas",
+    "text.autoconfig.condensed_creative.option.defaultCCGroups.@Tooltip": "Adiciona algumas Entradas Condensadas para determinadas Tags internas do Minecraft",
+
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig": "Configuração integrada de entrada",
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.@Tooltip": "Permite desativar determinadas seções das entradas Internas",
+
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.enchantmentBooks": "Livros de Encantamento",
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.enchantmentBooks.@Tooltip": "Controla como os livros de Encantamento serão divididos como uma Entrada condensada",
+
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.tippedArrows": "Flecha com Efeito",
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.tippedArrows.@Tooltip": "Controla como as flechas com Efeito serão divididas como uma Entrada condensada",
+
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.potions": "Poções",
+    "text.autoconfig.condensed_creative.option.defaultEntriesConfig.potions.@Tooltip": "Controla como as Poções serão divididas como uma Entrada condensada",
+
+
+    "text.autoconfig.condensed_creative.option.entryRefreshButton": "Ativar Botão de Atualização de Entrada",
+    "text.autoconfig.condensed_creative.option.entryRefreshButton.@Tooltip": "Útil se outra coisa estiver com problemas de renderização na tela de criação, pois esse botão serve mais para depuração",
+
+    "text.autoconfig.condensed_creative.option.entryBackgroundColor": "Ativar a Coloração do Plano de Fundo da Entrada",
+    "text.autoconfig.condensed_creative.option.entryBackgroundColor.@Tooltip": "Não recomendaria ter isso e os contornos desativados, pois será difícil ver as entradas condensadas.",
+
+    "text.autoconfig.condensed_creative.option.entryBorderColor": "Ativar a Coloração da Borda da Entrada",
+    "text.autoconfig.condensed_creative.option.entryBorderColor.@Tooltip": "Não recomendaria ter isso e os planos de fundo desativados, pois será difícil ver as entradas condensadas.",
+
+    "text.autoconfig.condensed_creative.option.condensedEntryBorderColor": "Coloração de Borda de Entrada Condensada",
+    "text.autoconfig.condensed_creative.option.condensedEntryBorderColor.@Tooltip": "Essa cor é usada quando a entrada está aberta e permite alterar a cor exata, se necessário",
+
+    "text.autoconfig.condensed_creative.option.rotationPreview": "Ativar Visualização de Rotação de Entrada Condensada",
+    "text.autoconfig.condensed_creative.option.rotationPreview.@Tooltip": "Ativa a rotação aleatória do Ícone de uma Entrada de Item Condensado",
+
+
+    "text.autoconfig.condensed_creative.option.tagPreviewForEntries": "Ativar Dica de Ferramenta de Tag",
+    "text.autoconfig.condensed_creative.option.tagPreviewForEntries.@Tooltip": "Mostrar etiqueta para a Entrada Condensada",
+
+    "text.autoconfig.condensed_creative.option.debugIdentifiersForEntries": "Ativar Dica de Ferramenta de Identificador Interno",
+    "text.autoconfig.condensed_creative.option.debugIdentifiersForEntries.@Tooltip": "Mostrar Identificador para a Entrada Condensada",
+
+
+    "itemGroup.condensed_creative.test": "Criativo Condensado",
+    "itemGroup.condensed_creative.test.tab.building_blocks": "Blocos de Construção",
+    "itemGroup.condensed_creative.test.tab.colored_blocks": "Blocos Coloridos",
+    "itemGroup.condensed_creative.test.tab.ingredients": "Ingredientes"
+}
